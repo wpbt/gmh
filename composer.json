@@ -1,0 +1,17 @@
+{
+    "name": "bharat/ghost-media-hunter",
+    "description": "WordPress plugin to find unused media",
+    "type": "wordpress-plugin",
+    "autoload": {
+        "psr-4": {
+            "GhostMediaHunter\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "bharat thapa",
+            "email": "bharatthapa45@gmail.com"
+        }
+    ],
+    "require": {}
+}
