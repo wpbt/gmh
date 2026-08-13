@@ -12,6 +12,14 @@ use GhostMediaHunter\Interfaces\Registrable;
 class AdminMenu implements Registrable
 {
     public const SLUG = 'ghost-media-hunter';
+    private const PER_PAGE = 20;
+
+    private ScanResultsRepository $repository;
+
+    public function __construct(ScanResultsRepository $repository)
+    {
+        $this->repository = $repository;
+    }
 
     public function register(): void
     {
@@ -35,8 +43,14 @@ class AdminMenu implements Registrable
             return;
         }
 
+        $page = isset($_GET['paged']) ? max(1, (int) $_GET['paged']) : 1;
+
         $data = [
-            'title' => __('Ghost Media Hunter', 'ghost-media-hunter'),
+            'title'    => get_admin_page_title(),
+            'results'  => $this->repository->get_unused(self::PER_PAGE, $page),
+            'total'    => $this->repository->count_unused(),
+            'page'     => $page,
+            'per_page' => self::PER_PAGE,
         ];
 
         include GHOST_MEDIA_HUNTER_PATH . 'views/admin-menu.php';

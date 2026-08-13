@@ -8,7 +8,7 @@ namespace GhostMediaHunter\Services;
 defined('ABSPATH') || exit;
 
 /**
- * Owns all reads/writes to the wp_gmh_scan_results table.
+ * Owns all reads/writes to the {prefix}_gmh_scan_results table.
  * Nothing else in the plugin should write raw SQL against it.
  */
 class ScanResultsRepository
