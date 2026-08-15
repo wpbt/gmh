@@ -25,10 +25,15 @@ use GhostMediaHunter\Interfaces\CheckerInterface;
  * unrelated field (a width, an order, a count) that happens to equal
  * the attachment ID. Real image-storing meta keys almost always
  * contain one of these words.
+ *
+ * Keywords are configurable via Settings (gmh_checker_keywords option,
+ * shared with OptionsChecker) — DEFAULT_KEYWORDS below is only the
+ * fallback used if that option is somehow missing (should be seeded
+ * on activation).
  */
 class PostMetaChecker implements CheckerInterface
 {
-    private const KEYWORDS = [
+    private const DEFAULT_KEYWORDS = [
         'image', 'logo', 'photo', 'banner', 'thumbnail',
         'icon', 'avatar', 'media', 'background', 'gallery',
     ];
@@ -57,9 +62,17 @@ class PostMetaChecker implements CheckerInterface
         // Serialized int element, e.g. a:1:{i:0;i:42;}
         $like_serialized_int = '%:' . $wpdb->esc_like($id) . ';%';
 
+        $keywords = get_option('gmh_checker_keywords', self::DEFAULT_KEYWORDS);
+
+        // See OptionsChecker::check() for why this guard is needed —
+        // get_option()'s default doesn't cover "exists but empty."
+        if (!is_array($keywords) || empty($keywords)) {
+            $keywords = self::DEFAULT_KEYWORDS;
+        }
+
         $keyword_clauses = [];
         $keyword_values  = [];
-        foreach (self::KEYWORDS as $keyword) {
+        foreach ($keywords as $keyword) {
             $keyword_clauses[] = 'pm.meta_key LIKE %s';
             $keyword_values[]  = '%' . $wpdb->esc_like($keyword) . '%';
         }

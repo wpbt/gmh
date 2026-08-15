@@ -9,5 +9,7 @@ defined('ABSPATH') || exit;
 
 class Deactivate
 {
-    public static function run(): void {}
+    public static function run(): void {
+        wp_clear_scheduled_hook(CronScheduler::HOOK);
+    }
 }

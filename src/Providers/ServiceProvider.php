@@ -16,8 +16,13 @@ use GhostMediaHunter\Services\Checkers\PostMetaChecker;
 use GhostMediaHunter\Services\Checkers\WidgetChecker;
 use GhostMediaHunter\Services\IdentifierResolver;
 use GhostMediaHunter\Services\Scan\Engine;
+use GhostMediaHunter\Services\ResultActions;
 use GhostMediaHunter\Services\ScanResultsRepository;
+use GhostMediaHunter\Services\ScanRestController;
+use GhostMediaHunter\Services\ScanRunner;
 use GhostMediaHunter\Services\ScanTrigger;
+use GhostMediaHunter\Services\CronScheduler;
+use GhostMediaHunter\Services\SettingsPage;
 
 class ServiceProvider
 {
@@ -65,12 +70,27 @@ class ServiceProvider
                     ]
                 );
             },
+            ScanRunner::class => function ($c) {
+                return new ScanRunner($c->get(Engine::class));
+            },
             AdminMenu::class => function ($c) {
                 return new AdminMenu($c->get(ScanResultsRepository::class));
             },
             ScanTrigger::class => function ($c) {
-                return new ScanTrigger($c->get(Engine::class));
-            }
+                return new ScanTrigger($c->get(ScanRunner::class));
+            },
+            CronScheduler::class => function ($c) {
+                return new CronScheduler($c->get(ScanRunner::class));
+            },
+            ScanRestController::class => function ($c) {
+                return new ScanRestController($c->get(ScanRunner::class));
+            },
+            SettingsPage::class => function ($c) {
+                return new SettingsPage;
+            },
+            ResultActions::class => function ($c) {
+                return new ResultActions($c->get(ScanResultsRepository::class));
+            },
         ];
     }
 }

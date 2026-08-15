@@ -28,12 +28,17 @@ use GhostMediaHunter\Interfaces\CheckerInterface;
  * image-storing option names almost always contain one of these
  * words, so this filter cuts the false-positive surface without
  * meaningfully losing real matches.
+ *
+ * Keywords are configurable via Settings (gmh_checker_keywords option,
+ * shared with PostMetaChecker) — DEFAULT_KEYWORDS below is only the
+ * fallback used if that option is somehow missing (should be seeded
+ * on activation).
  */
 class OptionsChecker implements CheckerInterface
 {
-    private const KEYWORDS = [
+    private const DEFAULT_KEYWORDS = [
         'image', 'logo', 'photo', 'banner', 'thumbnail',
-        'icon', 'avatar', 'media', 'background',
+        'icon', 'avatar', 'media', 'background', 'gallery',
     ];
 
     public function name(): string
@@ -60,9 +65,22 @@ class OptionsChecker implements CheckerInterface
         // Serialized int element, e.g. i:42;
         $like_serialized_int = '%:' . $wpdb->esc_like($id) . ';%';
 
+        $keywords = get_option('gmh_checker_keywords', self::DEFAULT_KEYWORDS);
+
+        // get_option()'s default only applies when the option row doesn't
+        // exist at all — if it exists but was saved as an empty array (e.g.
+        // the settings field got submitted blank), get_option() faithfully
+        // returns that empty array, not our fallback. An empty $keywords
+        // means zero LIKE clauses below, which produces invalid SQL
+        // ("WHERE () AND ...") — guard explicitly instead of trusting the
+        // stored value is always non-empty.
+        if (!is_array($keywords) || empty($keywords)) {
+            $keywords = self::DEFAULT_KEYWORDS;
+        }
+
         $keyword_clauses = [];
         $keyword_values  = [];
-        foreach (self::KEYWORDS as $keyword) {
+        foreach ($keywords as $keyword) {
             $keyword_clauses[] = 'option_name LIKE %s';
             $keyword_values[]  = '%' . $wpdb->esc_like($keyword) . '%';
         }

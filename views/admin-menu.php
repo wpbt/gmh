@@ -8,12 +8,28 @@ $results   = $data['results'];
 $total     = $data['total'];
 $page      = $data['page'];
 $per_page  = $data['per_page'];
+$view      = $data['view'];
 $last_page = (int) max(1, ceil($total / $per_page));
 ?>
 <div class="wrap">
     <h1><?php echo esc_html($data['title']); ?></h1>
 
-    <p><?php esc_html_e('Files that are unused in your site.', 'ghost-media-hunter'); ?></p>
+    <h2 class="nav-tab-wrapper">
+        <a href="<?php echo esc_url(remove_query_arg(['view', 'paged'])); ?>" class="nav-tab <?php echo $view === 'unused' ? 'nav-tab-active' : ''; ?>">
+            <?php printf(esc_html__('Unused (%d)', 'ghost-media-hunter'), (int) $data['unused_total']); ?>
+        </a>
+        <a href="<?php echo esc_url(add_query_arg(['view' => 'kept'], remove_query_arg('paged'))); ?>" class="nav-tab <?php echo $view === 'kept' ? 'nav-tab-active' : ''; ?>">
+            <?php printf(esc_html__('Kept (%d)', 'ghost-media-hunter'), (int) $data['kept_total']); ?>
+        </a>
+    </h2>
+
+    <p>
+        <?php if ($view === 'kept') : ?>
+            <?php esc_html_e('Files you\'ve marked "Keep" — excluded from the Unused list even if the scanner still can\'t find a reference to them.', 'ghost-media-hunter'); ?>
+        <?php else : ?>
+            <?php esc_html_e('Files that are unused in your site.', 'ghost-media-hunter'); ?>
+        <?php endif; ?>
+    </p>
 
     <p>
         <button type="button" class="button button-primary" id="gmh-scan-now">
@@ -49,18 +65,75 @@ $last_page = (int) max(1, ceil($total / $per_page));
                         return;
                     }
                     button.disabled = false;
-                    status.textContent = failedText;
+                    status.textContent = (result && result.data && result.data.message) ? result.data.message : failedText;
                 })
                 .catch(function () {
                     button.disabled = false;
                     status.textContent = failedText;
                 });
         });
+
+        // Row actions (Keep / Delete) — real event delegation on .wrap,
+        // since the table (and its buttons) is rendered further down the
+        // page, AFTER this script tag runs. Binding listeners directly to
+        // .gmh-row-action elements here would find zero of them (they
+        // don't exist in the DOM yet at this point) — delegating to an
+        // ancestor that already exists, and checking event.target on
+        // click, works regardless of DOM order.
+        var wrap = document.querySelector('.wrap');
+
+        wrap.addEventListener('click', function (event) {
+            var btn = event.target.closest('.gmh-row-action');
+            if (!btn) {
+                return;
+            }
+
+            var confirmMsg = btn.getAttribute('data-gmh-confirm');
+            if (confirmMsg && !window.confirm(confirmMsg)) {
+                return;
+            }
+
+            var row = btn.closest('tr');
+            var otherButtons = row ? row.querySelectorAll('.gmh-row-action') : [btn];
+            otherButtons.forEach(function (b) { b.disabled = true; });
+
+            var data = new FormData();
+            data.append('action', btn.getAttribute('data-gmh-action'));
+            data.append('_wpnonce', btn.getAttribute('data-gmh-nonce'));
+            data.append('attachment_id', btn.getAttribute('data-attachment-id'));
+
+            fetch(<?php echo wp_json_encode(admin_url('admin-ajax.php')); ?>, {
+                method: 'POST',
+                credentials: 'same-origin',
+                body: data,
+            })
+                .then(function (response) { return response.json(); })
+                .then(function (result) {
+                    if (result && result.success) {
+                        if (row) {
+                            row.remove();
+                        }
+                        return;
+                    }
+                    otherButtons.forEach(function (b) { b.disabled = false; });
+                    window.alert((result && result.data && result.data.message) ? result.data.message : failedText);
+                })
+                .catch(function () {
+                    otherButtons.forEach(function (b) { b.disabled = false; });
+                    window.alert(failedText);
+                });
+        });
     })();
     </script>
 
     <?php if (empty($results)) : ?>
-        <p><?php esc_html_e('No unused media found yet.', 'ghost-media-hunter'); ?></p>
+        <p>
+            <?php if ($view === 'kept') : ?>
+                <?php esc_html_e('Nothing kept yet.', 'ghost-media-hunter'); ?>
+            <?php else : ?>
+                <?php esc_html_e('No unused media found yet.', 'ghost-media-hunter'); ?>
+            <?php endif; ?>
+        </p>
     <?php else : ?>
         <table class="wp-list-table widefat fixed striped">
             <thead>
@@ -68,6 +141,7 @@ $last_page = (int) max(1, ceil($total / $per_page));
                     <th><?php esc_html_e('File', 'ghost-media-hunter'); ?></th>
                     <th><?php esc_html_e('Size', 'ghost-media-hunter'); ?></th>
                     <th><?php esc_html_e('Last checked', 'ghost-media-hunter'); ?></th>
+                    <th><?php esc_html_e('Actions', 'ghost-media-hunter'); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -87,6 +161,33 @@ $last_page = (int) max(1, ceil($total / $per_page));
                         </td>
                         <td><?php echo esc_html(size_format((int) $row->file_size)); ?></td>
                         <td><?php echo esc_html($row->last_checked); ?></td>
+                        <td>
+                            <?php if ($view === 'kept') : ?>
+                                <button
+                                    type="button"
+                                    class="button gmh-row-action"
+                                    data-gmh-action="<?php echo esc_attr(\GhostMediaHunter\Services\ResultActions::ACTION_RESTORE); ?>"
+                                    data-gmh-nonce="<?php echo esc_attr(wp_create_nonce(\GhostMediaHunter\Services\ResultActions::ACTION_RESTORE)); ?>"
+                                    data-attachment-id="<?php echo esc_attr($row->attachment_id); ?>"
+                                ><?php esc_html_e('Restore', 'ghost-media-hunter'); ?></button>
+                            <?php else : ?>
+                                <button
+                                    type="button"
+                                    class="button gmh-row-action"
+                                    data-gmh-action="<?php echo esc_attr(\GhostMediaHunter\Services\ResultActions::ACTION_KEEP); ?>"
+                                    data-gmh-nonce="<?php echo esc_attr(wp_create_nonce(\GhostMediaHunter\Services\ResultActions::ACTION_KEEP)); ?>"
+                                    data-attachment-id="<?php echo esc_attr($row->attachment_id); ?>"
+                                ><?php esc_html_e('Keep', 'ghost-media-hunter'); ?></button>
+                            <?php endif; ?>
+                            <button
+                                type="button"
+                                class="button gmh-row-action"
+                                data-gmh-action="<?php echo esc_attr(\GhostMediaHunter\Services\ResultActions::ACTION_DELETE); ?>"
+                                data-gmh-nonce="<?php echo esc_attr(wp_create_nonce(\GhostMediaHunter\Services\ResultActions::ACTION_DELETE)); ?>"
+                                data-attachment-id="<?php echo esc_attr($row->attachment_id); ?>"
+                                data-gmh-confirm="<?php echo esc_attr__('Delete this file? Unless your site has MEDIA_TRASH enabled, this is PERMANENT — it will not go to the trash.', 'ghost-media-hunter'); ?>"
+                            ><?php esc_html_e('Delete', 'ghost-media-hunter'); ?></button>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

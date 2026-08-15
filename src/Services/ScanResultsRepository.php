@@ -80,6 +80,22 @@ class ScanResultsRepository
     }
 
     /**
+     * Remove a result row entirely — used when the attachment itself
+     * has been deleted, so a stale row doesn't linger pointing at an
+     * attachment_id that no longer exists.
+     */
+    public function delete_result(int $attachment_id): void
+    {
+        global $wpdb;
+
+        $wpdb->delete(
+            $this->table,
+            ['attachment_id' => $attachment_id],
+            ['%d']
+        );
+    }
+
+    /**
      * Paginated list of attachments currently flagged unused
      * (and not manually whitelisted), most recently checked first.
      *
@@ -116,6 +132,41 @@ class ScanResultsRepository
         );
 
         return (int) $wpdb->get_var($sql);
+    }
+
+    /**
+     * Paginated list of attachments manually marked "Keep" (ignored),
+     * regardless of scan status — this is the only way back to see
+     * (and un-keep, or delete) something after clicking Keep, since
+     * get_unused() excludes ignored rows entirely.
+     *
+     * @return array<int, object>
+     */
+    public function get_kept(int $per_page = 20, int $page = 1): array
+    {
+        global $wpdb;
+
+        $offset = max(0, ($page - 1) * $per_page);
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $this->table is not user input
+        $sql = $wpdb->prepare(
+            "SELECT * FROM {$this->table}
+             WHERE ignored = 1
+             ORDER BY last_checked DESC
+             LIMIT %d OFFSET %d",
+            $per_page,
+            $offset
+        );
+
+        return $wpdb->get_results($sql);
+    }
+
+    public function count_kept(): int
+    {
+        global $wpdb;
+
+        // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $this->table is not user input
+        return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$this->table} WHERE ignored = 1");
     }
 
     /**

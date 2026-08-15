@@ -8,22 +8,22 @@ namespace GhostMediaHunter\Services;
 defined('ABSPATH') || exit;
 
 use GhostMediaHunter\Interfaces\Registrable;
-use GhostMediaHunter\Services\Scan\Engine;
 
 /**
- * Handles the manual "Scan now" button on the admin page. Scans every
- * attachment on the site in one request — fine for now (dev/testing),
- * will need batching or to move behind cron (step 10) for large libraries.
+ * Handles the manual "Scan now" button on the admin page — the
+ * ajax-specific wrapper around ScanRunner::run_all(). Cron and the
+ * external REST trigger call the same runner, just with different
+ * auth/entry points.
  */
 class ScanTrigger implements Registrable
 {
     public const ACTION = 'gmh_scan_now';
 
-    private Engine $engine;
+    private ScanRunner $runner;
 
-    public function __construct(Engine $engine)
+    public function __construct(ScanRunner $runner)
     {
-        $this->engine = $engine;
+        $this->runner = $runner;
     }
 
     public function register(): void
@@ -39,17 +39,17 @@ class ScanTrigger implements Registrable
             wp_send_json_error(['message' => __('Not allowed.', 'ghost-media-hunter')], 403);
         }
 
-        $attachment_ids = get_posts([
-            'post_type'      => 'attachment',
-            'post_status'    => 'inherit',
-            'fields'         => 'ids',
-            'posts_per_page' => -1,
-        ]);
+        $scanned = $this->runner->run_all();
 
-        $this->engine->run_batch($attachment_ids);
+        if ($scanned === null) {
+            wp_send_json_error(
+                ['message' => __('A scan is already in progress.', 'ghost-media-hunter')],
+                409
+            );
+        }
 
         wp_send_json_success([
-            'scanned' => count($attachment_ids),
+            'scanned' => $scanned,
         ]);
     }
 }

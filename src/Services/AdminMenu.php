@@ -44,14 +44,22 @@ class AdminMenu implements Registrable
         }
 
         $page = isset($_GET['paged']) ? max(1, (int) $_GET['paged']) : 1;
+        $view = (isset($_GET['view']) && $_GET['view'] === 'kept') ? 'kept' : 'unused';
 
         $data = [
-            'title'    => get_admin_page_title(),
-            'results'  => $this->repository->get_unused(self::PER_PAGE, $page),
-            'total'    => $this->repository->count_unused(),
-            'page'     => $page,
-            'per_page' => self::PER_PAGE,
+            'title'          => __('Ghost Media Hunter', 'ghost-media-hunter'),
+            'view'           => $view,
+            'page'           => $page,
+            'per_page'       => self::PER_PAGE,
+            'unused_total'   => $this->repository->count_unused(),
+            'kept_total'     => $this->repository->count_kept(),
         ];
+
+        $data['results'] = $view === 'kept'
+            ? $this->repository->get_kept(self::PER_PAGE, $page)
+            : $this->repository->get_unused(self::PER_PAGE, $page);
+
+        $data['total'] = $view === 'kept' ? $data['kept_total'] : $data['unused_total'];
 
         include GHOST_MEDIA_HUNTER_PATH . 'views/admin-menu.php';
     }
