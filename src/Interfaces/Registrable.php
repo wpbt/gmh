@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace GhostMediaHunter\Interfaces;
 
 // Exit if accessed directly!
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
-interface Registrable
-{
-    /**
-     * Register the service (hook into WordPress)
-     * This is called after all services are registered
-     */
-    public function register(): void;
+interface Registrable {
+
+	/**
+	 * Register the service (hook into WordPress)
+	 * This is called after all services are registered
+	 */
+	public function register(): void;
 }

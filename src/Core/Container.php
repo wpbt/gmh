@@ -5,57 +5,59 @@ declare(strict_types=1);
 namespace GhostMediaHunter\Core;
 
 // Exit if accessed directly!
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 use Closure;
 
-class Container
-{
-    private array $services = [];
+class Container {
 
-    /**
-     * Register a service
-     */
-    public function set(string $name, Closure $resolver): void
-    {
-        $this->services[$name] = [
-            'resolver' => $resolver,
-            'instance' => null,
-        ];
-    }
+	/**
+	 * @var array<string, array{resolver: Closure, instance: object|null}>
+	 */
+	private array $services = array();
 
-    /**
-     * Get a service (creates it once, then returns same instance)
-     */
-    public function get(string $name): object
-    {
-        // make sure the service is set first.
-        if (!isset($this->services[$name])) {
-            throw new \Exception("Service '{$name}' not found in container");
-        }
+	/**
+	 * Register a service
+	 */
+	public function set( string $name, Closure $resolver ): void {
+		$this->services[ $name ] = array(
+			'resolver' => $resolver,
+			'instance' => null,
+		);
+	}
 
-        // Return existing instance if already created
-        if ($this->services[$name]['instance'] !== null) {
-            return $this->services[$name]['instance'];
-        }
+	/**
+	 * Get a service (creates it once, then returns same instance)
+	 */
+	public function get( string $name ): object {
+		// make sure the service is set first.
+		if ( ! isset( $this->services[ $name ] ) ) {
+			throw new \Exception( "Service '{$name}' not found in container" );
+		}
 
-        // Create and store the instance
-        $resolver = $this->services[$name]['resolver'];
-        $this->services[$name]['instance'] = $resolver($this);
+		// Return existing instance if already created
+		if ( $this->services[ $name ]['instance'] !== null ) {
+			return $this->services[ $name ]['instance'];
+		}
 
-        return $this->services[$name]['instance'];
-    }
+		// Create and store the instance
+		$resolver                            = $this->services[ $name ]['resolver'];
+		$this->services[ $name ]['instance'] = $resolver( $this );
 
-    public function get_registered_services(): array
-    {
-        return array_keys($this->services);
-    }
+		return $this->services[ $name ]['instance'];
+	}
 
-    /**
-     * Check if service exists
-     */
-    public function has(string $name): bool
-    {
-        return isset($this->services[$name]);
-    }
+	/**
+	 * @return string[]
+	 */
+	public function get_registered_services(): array {
+		return array_keys( $this->services );
+	}
+
+	/**
+	 * Check if service exists
+	 */
+	public function has( string $name ): bool {
+		return isset( $this->services[ $name ] );
+	}
 }

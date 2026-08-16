@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace GhostMediaHunter\Services\Checkers;
 
 // Exit if accessed directly!
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 use GhostMediaHunter\Interfaces\CheckerInterface;
 
@@ -34,61 +34,67 @@ use GhostMediaHunter\Interfaces\CheckerInterface;
  * fallback used if that option is somehow missing (should be seeded
  * on activation).
  */
-class OptionsChecker implements CheckerInterface
-{
-    private const DEFAULT_KEYWORDS = [
-        'image', 'logo', 'photo', 'banner', 'thumbnail',
-        'icon', 'avatar', 'media', 'background', 'gallery',
-    ];
+class OptionsChecker implements CheckerInterface {
 
-    public function name(): string
-    {
-        return 'options';
-    }
+	private const DEFAULT_KEYWORDS = array(
+		'image',
+		'logo',
+		'photo',
+		'banner',
+		'thumbnail',
+		'icon',
+		'avatar',
+		'media',
+		'background',
+		'gallery',
+	);
 
-    public function check(?array $identifiers): bool
-    {
-        if ($identifiers === null) {
-            return false;
-        }
+	public function name(): string {
+		return 'options';
+	}
 
-        global $wpdb;
+	public function check( ?array $identifiers ): bool {
+		if ( $identifiers === null ) {
+			return false;
+		}
 
-        $id = (string) $identifiers['id'];
+		global $wpdb;
 
-        // Plain scalar option value, e.g. a "site_logo" option storing just the ID
-        $exact = $id;
+		$id = (string) $identifiers['id'];
 
-        // Serialized string element, e.g. s:2:"42";
-        $like_serialized_string = '%"' . $wpdb->esc_like($id) . '";%';
+		// Plain scalar option value, e.g. a "site_logo" option storing just the ID
+		$exact = $id;
 
-        // Serialized int element, e.g. i:42;
-        $like_serialized_int = '%:' . $wpdb->esc_like($id) . ';%';
+		// Serialized string element, e.g. s:2:"42";
+		$like_serialized_string = '%"' . $wpdb->esc_like( $id ) . '";%';
 
-        $keywords = get_option('gmh_checker_keywords', self::DEFAULT_KEYWORDS);
+		// Serialized int element, e.g. i:42;
+		$like_serialized_int = '%:' . $wpdb->esc_like( $id ) . ';%';
 
-        // get_option()'s default only applies when the option row doesn't
-        // exist at all — if it exists but was saved as an empty array (e.g.
-        // the settings field got submitted blank), get_option() faithfully
-        // returns that empty array, not our fallback. An empty $keywords
-        // means zero LIKE clauses below, which produces invalid SQL
-        // ("WHERE () AND ...") — guard explicitly instead of trusting the
-        // stored value is always non-empty.
-        if (!is_array($keywords) || empty($keywords)) {
-            $keywords = self::DEFAULT_KEYWORDS;
-        }
+		$keywords = get_option( 'gmh_checker_keywords', self::DEFAULT_KEYWORDS );
 
-        $keyword_clauses = [];
-        $keyword_values  = [];
-        foreach ($keywords as $keyword) {
-            $keyword_clauses[] = 'option_name LIKE %s';
-            $keyword_values[]  = '%' . $wpdb->esc_like($keyword) . '%';
-        }
-        $keyword_sql = implode(' OR ', $keyword_clauses);
+		// get_option()'s default only applies when the option row doesn't
+		// exist at all — if it exists but was saved as an empty array (e.g.
+		// the settings field got submitted blank), get_option() faithfully
+		// returns that empty array, not our fallback. An empty $keywords
+		// means zero LIKE clauses below, which produces invalid SQL
+		// ("WHERE () AND ...") — guard explicitly instead of trusting the
+		// stored value is always non-empty.
+		if ( ! is_array( $keywords ) || empty( $keywords ) ) {
+			$keywords = self::DEFAULT_KEYWORDS;
+		}
+
+		$keyword_clauses = array();
+		$keyword_values  = array();
+		foreach ( $keywords as $keyword ) {
+			$keyword_clauses[] = 'option_name LIKE %s';
+			$keyword_values[]  = '%' . $wpdb->esc_like( $keyword ) . '%';
+		}
+		$keyword_sql = implode( ' OR ', $keyword_clauses );
 
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- built via $wpdb->prepare() below
-        $sql = $wpdb->prepare(
-            "SELECT option_id FROM {$wpdb->options}
+		$sql = $wpdb->prepare(
+			"SELECT option_id FROM {$wpdb->options}
              WHERE ({$keyword_sql})
              AND (
                  option_value = %s
@@ -96,9 +102,9 @@ class OptionsChecker implements CheckerInterface
                  OR option_value LIKE %s
              )
              LIMIT 1",
-            array_merge($keyword_values, [$exact, $like_serialized_string, $like_serialized_int])
-        );
+			array_merge( $keyword_values, array( $exact, $like_serialized_string, $like_serialized_int ) )
+		);
 
-        return $wpdb->get_var($sql) !== null;
-    }
+		return $wpdb->get_var( $sql ) !== null;
+	}
 }

@@ -5,80 +5,74 @@ declare(strict_types=1);
 namespace GhostMediaHunter;
 
 // Exit if accessed directly!
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 use GhostMediaHunter\Core\Container;
 use GhostMediaHunter\Interfaces\Registrable;
 use GhostMediaHunter\Providers\ServiceProvider;
 
-class Plugin
-{
-    private static ?Plugin $instance = null;
-    private Container $container;
+class Plugin {
 
-    /**
-     * Private constructor to prevent direct instantiation
-     */
-    private function __construct()
-    {
-        $this->container = new Container();
-    }
+	private static ?Plugin $instance = null;
+	private Container $container;
 
-    public static function get_instance(): self
-    {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
+	/**
+	 * Private constructor to prevent direct instantiation
+	 */
+	private function __construct() {
+		$this->container = new Container();
+	}
 
-    public function init(): void
-    {
-        $this->register_services();
-        $this->register_hooks();
-    }
+	public static function get_instance(): self {
+		if ( self::$instance === null ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
 
-    private function register_services(): void
-    {
-        $services = ServiceProvider::get_services();
+	public function init(): void {
+		$this->register_services();
+		$this->register_hooks();
+	}
 
-        foreach ($services as $name => $resolver) {
-            $this->container->set($name, $resolver);
-        }
-    }
+	private function register_services(): void {
+		$services = ServiceProvider::get_services();
 
-    private function register_hooks(): void
-    {
-        // Load plugin textdomain
-        add_action('init', [$this, 'load_text_domain']);
+		foreach ( $services as $name => $resolver ) {
+			$this->container->set( $name, $resolver );
+		}
+	}
 
-        foreach ($this->container->get_registered_services() as $service) {
-            $hook = $this->container->get($service);
-            if ($hook instanceof Registrable) {
-                $hook->register();
-            }
-        }
-    }
+	private function register_hooks(): void {
+		// Load plugin textdomain
+		add_action( 'init', array( $this, 'load_text_domain' ) );
 
-    public function load_text_domain(): void
-    {
-        load_plugin_textdomain(
-            'ghost-media-hunter',
-            false,
-            dirname(GHOST_MEDIA_HUNTER_FILE) . '/languages'
-        );
-    }
+		foreach ( $this->container->get_registered_services() as $service ) {
+			$hook = $this->container->get( $service );
+			if ( $hook instanceof Registrable ) {
+				$hook->register();
+			}
+		}
+	}
 
-    /**
-     * Prevent cloning
-     */
-    private function __clone() {}
+	public function load_text_domain(): void {
+		load_plugin_textdomain(
+			'ghost-media-hunter',
+			false,
+			dirname( GHOST_MEDIA_HUNTER_FILE ) . '/languages'
+		);
+	}
 
-    /**
-     * Prevent unserialization
-     */
-    public function __wakeup()
-    {
-        throw new \Exception('Cannot unserialize singleton');
-    }
+	/**
+	 * Prevent cloning
+	 */
+	private function __clone() {
+	}
+
+	/**
+	 * Prevent unserialization
+	 */
+	public function __wakeup() {
+		throw new \Exception( 'Cannot unserialize singleton' );
+	}
 }

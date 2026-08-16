@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace GhostMediaHunter\Services\Checkers;
 
 // Exit if accessed directly!
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 use GhostMediaHunter\Interfaces\CheckerInterface;
 
@@ -31,56 +31,62 @@ use GhostMediaHunter\Interfaces\CheckerInterface;
  * fallback used if that option is somehow missing (should be seeded
  * on activation).
  */
-class PostMetaChecker implements CheckerInterface
-{
-    private const DEFAULT_KEYWORDS = [
-        'image', 'logo', 'photo', 'banner', 'thumbnail',
-        'icon', 'avatar', 'media', 'background', 'gallery',
-    ];
+class PostMetaChecker implements CheckerInterface {
 
-    public function name(): string
-    {
-        return 'post_meta';
-    }
+	private const DEFAULT_KEYWORDS = array(
+		'image',
+		'logo',
+		'photo',
+		'banner',
+		'thumbnail',
+		'icon',
+		'avatar',
+		'media',
+		'background',
+		'gallery',
+	);
 
-    public function check(?array $identifiers): bool
-    {
-        if ($identifiers === null) {
-            return false;
-        }
+	public function name(): string {
+		return 'post_meta';
+	}
 
-        global $wpdb;
+	public function check( ?array $identifiers ): bool {
+		if ( $identifiers === null ) {
+			return false;
+		}
 
-        $id = (string) $identifiers['id'];
+		global $wpdb;
 
-        // Plain scalar meta value: meta_value = '42'
-        $exact = $id;
+		$id = (string) $identifiers['id'];
 
-        // Serialized string element, e.g. ACF gallery: s:2:"42";
-        $like_serialized_string = '%"' . $wpdb->esc_like($id) . '";%';
+		// Plain scalar meta value: meta_value = '42'
+		$exact = $id;
 
-        // Serialized int element, e.g. a:1:{i:0;i:42;}
-        $like_serialized_int = '%:' . $wpdb->esc_like($id) . ';%';
+		// Serialized string element, e.g. ACF gallery: s:2:"42";
+		$like_serialized_string = '%"' . $wpdb->esc_like( $id ) . '";%';
 
-        $keywords = get_option('gmh_checker_keywords', self::DEFAULT_KEYWORDS);
+		// Serialized int element, e.g. a:1:{i:0;i:42;}
+		$like_serialized_int = '%:' . $wpdb->esc_like( $id ) . ';%';
 
-        // See OptionsChecker::check() for why this guard is needed —
-        // get_option()'s default doesn't cover "exists but empty."
-        if (!is_array($keywords) || empty($keywords)) {
-            $keywords = self::DEFAULT_KEYWORDS;
-        }
+		$keywords = get_option( 'gmh_checker_keywords', self::DEFAULT_KEYWORDS );
 
-        $keyword_clauses = [];
-        $keyword_values  = [];
-        foreach ($keywords as $keyword) {
-            $keyword_clauses[] = 'pm.meta_key LIKE %s';
-            $keyword_values[]  = '%' . $wpdb->esc_like($keyword) . '%';
-        }
-        $keyword_sql = implode(' OR ', $keyword_clauses);
+		// See OptionsChecker::check() for why this guard is needed —
+		// get_option()'s default doesn't cover "exists but empty."
+		if ( ! is_array( $keywords ) || empty( $keywords ) ) {
+			$keywords = self::DEFAULT_KEYWORDS;
+		}
+
+		$keyword_clauses = array();
+		$keyword_values  = array();
+		foreach ( $keywords as $keyword ) {
+			$keyword_clauses[] = 'pm.meta_key LIKE %s';
+			$keyword_values[]  = '%' . $wpdb->esc_like( $keyword ) . '%';
+		}
+		$keyword_sql = implode( ' OR ', $keyword_clauses );
 
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- built via $wpdb->prepare() below
-        $sql = $wpdb->prepare(
-            "SELECT pm.post_id FROM {$wpdb->postmeta} pm
+		$sql = $wpdb->prepare(
+			"SELECT pm.post_id FROM {$wpdb->postmeta} pm
              INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
              WHERE pm.meta_key != '_thumbnail_id'
              AND ({$keyword_sql})
@@ -91,9 +97,9 @@ class PostMetaChecker implements CheckerInterface
                  OR pm.meta_value LIKE %s
              )
              LIMIT 1",
-            array_merge($keyword_values, [$exact, $like_serialized_string, $like_serialized_int])
-        );
+			array_merge( $keyword_values, array( $exact, $like_serialized_string, $like_serialized_int ) )
+		);
 
-        return $wpdb->get_var($sql) !== null;
-    }
+		return $wpdb->get_var( $sql ) !== null;
+	}
 }

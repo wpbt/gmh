@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace GhostMediaHunter\Services\Checkers;
 
 // Exit if accessed directly!
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 use GhostMediaHunter\Interfaces\CheckerInterface;
 
@@ -23,30 +23,28 @@ use GhostMediaHunter\Interfaces\CheckerInterface;
  * name in the serialized string, so no extra keyword filter is needed
  * here the way OptionsChecker/PostMetaChecker needed one.
  */
-class WidgetChecker implements CheckerInterface
-{
-    public function name(): string
-    {
-        return 'widgets';
-    }
+class WidgetChecker implements CheckerInterface {
 
-    public function check(?array $identifiers): bool
-    {
-        if ($identifiers === null) {
-            return false;
-        }
+	public function name(): string {
+		return 'widgets';
+	}
 
-        global $wpdb;
+	public function check( ?array $identifiers ): bool {
+		if ( $identifiers === null ) {
+			return false;
+		}
 
-        $like_attachment_id = '%"attachment_id";i:' . $wpdb->esc_like((string) $identifiers['id']) . ';%';
-        $like_class         = '%' . $wpdb->esc_like('wp-image-' . $identifiers['id']) . '%';
-        $like_path          = '%' . $wpdb->esc_like($identifiers['relative_path']) . '%';
-        $like_resized       = '%' . $wpdb->esc_like($identifiers['basename'] . '-') . '%'
-            . $wpdb->esc_like('.' . $identifiers['extension']) . '%';
+		global $wpdb;
+
+		$like_attachment_id = '%"attachment_id";i:' . $wpdb->esc_like( (string) $identifiers['id'] ) . ';%';
+		$like_class         = '%' . $wpdb->esc_like( 'wp-image-' . $identifiers['id'] ) . '%';
+		$like_path          = '%' . $wpdb->esc_like( $identifiers['relative_path'] ) . '%';
+		$like_resized       = '%' . $wpdb->esc_like( $identifiers['basename'] . '-' ) . '%'
+			. $wpdb->esc_like( '.' . $identifiers['extension'] ) . '%';
 
         // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- built via $wpdb->prepare() below
-        $sql = $wpdb->prepare(
-            "SELECT option_id FROM {$wpdb->options}
+		$sql = $wpdb->prepare(
+			"SELECT option_id FROM {$wpdb->options}
              WHERE option_name LIKE 'widget\\_%'
              AND (
                  option_value LIKE %s
@@ -55,12 +53,12 @@ class WidgetChecker implements CheckerInterface
                  OR option_value LIKE %s
              )
              LIMIT 1",
-            $like_attachment_id,
-            $like_class,
-            $like_path,
-            $like_resized
-        );
+			$like_attachment_id,
+			$like_class,
+			$like_path,
+			$like_resized
+		);
 
-        return $wpdb->get_var($sql) !== null;
-    }
+		return $wpdb->get_var( $sql ) !== null;
+	}
 }

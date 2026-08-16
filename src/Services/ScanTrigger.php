@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace GhostMediaHunter\Services;
 
 // Exit if accessed directly!
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 use GhostMediaHunter\Interfaces\Registrable;
 
@@ -15,41 +15,40 @@ use GhostMediaHunter\Interfaces\Registrable;
  * external REST trigger call the same runner, just with different
  * auth/entry points.
  */
-class ScanTrigger implements Registrable
-{
-    public const ACTION = 'gmh_scan_now';
+class ScanTrigger implements Registrable {
 
-    private ScanRunner $runner;
+	public const ACTION = 'gmh_scan_now';
 
-    public function __construct(ScanRunner $runner)
-    {
-        $this->runner = $runner;
-    }
+	private ScanRunner $runner;
 
-    public function register(): void
-    {
-        add_action('wp_ajax_' . self::ACTION, [$this, 'handle']);
-    }
+	public function __construct( ScanRunner $runner ) {
+		$this->runner = $runner;
+	}
 
-    public function handle(): void
-    {
-        check_ajax_referer(self::ACTION);
+	public function register(): void {
+		add_action( 'wp_ajax_' . self::ACTION, array( $this, 'handle' ) );
+	}
 
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Not allowed.', 'ghost-media-hunter')], 403);
-        }
+	public function handle(): void {
+		check_ajax_referer( self::ACTION );
 
-        $scanned = $this->runner->run_all();
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Not allowed.', 'ghost-media-hunter' ) ), 403 );
+		}
 
-        if ($scanned === null) {
-            wp_send_json_error(
-                ['message' => __('A scan is already in progress.', 'ghost-media-hunter')],
-                409
-            );
-        }
+		$scanned = $this->runner->run_all();
 
-        wp_send_json_success([
-            'scanned' => $scanned,
-        ]);
-    }
+		if ( $scanned === null ) {
+			wp_send_json_error(
+				array( 'message' => __( 'A scan is already in progress.', 'ghost-media-hunter' ) ),
+				409
+			);
+		}
+
+		wp_send_json_success(
+			array(
+				'scanned' => $scanned,
+			)
+		);
+	}
 }

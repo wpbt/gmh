@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace GhostMediaHunter\Services;
 
 // Exit if accessed directly!
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 use GhostMediaHunter\Interfaces\Registrable;
 
@@ -24,82 +24,76 @@ use GhostMediaHunter\Interfaces\Registrable;
  * change this plugin shouldn't silently impose. The confirmation
  * dialog in admin-menu.php's JS is what actually warns the user.
  */
-class ResultActions implements Registrable
-{
-    public const ACTION_KEEP    = 'gmh_mark_kept';
-    public const ACTION_RESTORE = 'gmh_restore_kept';
-    public const ACTION_DELETE  = 'gmh_delete_attachment';
+class ResultActions implements Registrable {
 
-    private ScanResultsRepository $repository;
+	public const ACTION_KEEP    = 'gmh_mark_kept';
+	public const ACTION_RESTORE = 'gmh_restore_kept';
+	public const ACTION_DELETE  = 'gmh_delete_attachment';
 
-    public function __construct(ScanResultsRepository $repository)
-    {
-        $this->repository = $repository;
-    }
+	private ScanResultsRepository $repository;
 
-    public function register(): void
-    {
-        add_action('wp_ajax_' . self::ACTION_KEEP, [$this, 'handle_keep']);
-        add_action('wp_ajax_' . self::ACTION_RESTORE, [$this, 'handle_restore']);
-        add_action('wp_ajax_' . self::ACTION_DELETE, [$this, 'handle_delete']);
-    }
+	public function __construct( ScanResultsRepository $repository ) {
+		$this->repository = $repository;
+	}
 
-    public function handle_keep(): void
-    {
-        $attachment_id = $this->authorize_and_get_id(self::ACTION_KEEP);
+	public function register(): void {
+		add_action( 'wp_ajax_' . self::ACTION_KEEP, array( $this, 'handle_keep' ) );
+		add_action( 'wp_ajax_' . self::ACTION_RESTORE, array( $this, 'handle_restore' ) );
+		add_action( 'wp_ajax_' . self::ACTION_DELETE, array( $this, 'handle_delete' ) );
+	}
 
-        $this->repository->mark_ignored($attachment_id, true);
+	public function handle_keep(): void {
+		$attachment_id = $this->authorize_and_get_id( self::ACTION_KEEP );
 
-        wp_send_json_success(['attachment_id' => $attachment_id]);
-    }
+		$this->repository->mark_ignored( $attachment_id, true );
 
-    public function handle_restore(): void
-    {
-        $attachment_id = $this->authorize_and_get_id(self::ACTION_RESTORE);
+		wp_send_json_success( array( 'attachment_id' => $attachment_id ) );
+	}
 
-        $this->repository->mark_ignored($attachment_id, false);
+	public function handle_restore(): void {
+		$attachment_id = $this->authorize_and_get_id( self::ACTION_RESTORE );
 
-        wp_send_json_success(['attachment_id' => $attachment_id]);
-    }
+		$this->repository->mark_ignored( $attachment_id, false );
 
-    public function handle_delete(): void
-    {
-        $attachment_id = $this->authorize_and_get_id(self::ACTION_DELETE);
+		wp_send_json_success( array( 'attachment_id' => $attachment_id ) );
+	}
 
-        $deleted = wp_delete_attachment($attachment_id, false);
+	public function handle_delete(): void {
+		$attachment_id = $this->authorize_and_get_id( self::ACTION_DELETE );
 
-        if (!$deleted) {
-            wp_send_json_error(
-                ['message' => __('Could not delete that attachment.', 'ghost-media-hunter')],
-                500
-            );
-        }
+		$deleted = wp_delete_attachment( $attachment_id, false );
 
-        $this->repository->delete_result($attachment_id);
+		if ( ! $deleted ) {
+			wp_send_json_error(
+				array( 'message' => __( 'Could not delete that attachment.', 'ghost-media-hunter' ) ),
+				500
+			);
+		}
 
-        wp_send_json_success(['attachment_id' => $attachment_id]);
-    }
+		$this->repository->delete_result( $attachment_id );
 
-    /**
-     * Shared nonce + capability + input check for both actions.
-     * Ends the request (via check_ajax_referer / wp_send_json_error)
-     * on failure, so a normal return only happens once everything's
-     * valid.
-     */
-    private function authorize_and_get_id(string $action): int
-    {
-        check_ajax_referer($action);
+		wp_send_json_success( array( 'attachment_id' => $attachment_id ) );
+	}
 
-        if (!current_user_can('manage_options')) {
-            wp_send_json_error(['message' => __('Not allowed.', 'ghost-media-hunter')], 403);
-        }
+	/**
+	 * Shared nonce + capability + input check for both actions.
+	 * Ends the request (via check_ajax_referer / wp_send_json_error)
+	 * on failure, so a normal return only happens once everything's
+	 * valid.
+	 */
+	private function authorize_and_get_id( string $action ): int {
+		check_ajax_referer( $action );
 
-        $attachment_id = isset($_POST['attachment_id']) ? (int) $_POST['attachment_id'] : 0;
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Not allowed.', 'ghost-media-hunter' ) ), 403 );
+		}
 
-        if ($attachment_id <= 0) {
-            wp_send_json_error(['message' => __('Missing attachment id.', 'ghost-media-hunter')], 400);
-        }
+		$attachment_id = isset( $_POST['attachment_id'] ) ? (int) $_POST['attachment_id'] : 0;
 
-        return $attachment_id;
-    }
+		if ( $attachment_id <= 0 ) {
+			wp_send_json_error( array( 'message' => __( 'Missing attachment id.', 'ghost-media-hunter' ) ), 400 );
+		}
+
+		return $attachment_id;
+	}
 }

@@ -1,6 +1,6 @@
 {
     "name": "bharat/ghost-media-hunter",
-    "description": "WordPress plugin to find unused media",
+    "description": "WordPress plugin to find unused media in the site",
     "type": "wordpress-plugin",
     "autoload": {
         "psr-4": {
@@ -10,8 +10,28 @@
     "authors": [
         {
             "name": "bharat thapa",
-            "email": "bharatthapa45@gmail.com"
+            "email": "admin@bharatt.com.np"
         }
     ],
-    "require": {}
+    "require-dev": {
+        "phpstan/phpstan": "^2.2",
+        "szepeviktor/phpstan-wordpress": "^2.0",
+        "phpstan/extension-installer": "^1.4",
+        "squizlabs/php_codesniffer": "^3.13",
+        "wp-coding-standards/wpcs": "^3.4",
+        "phpcompatibility/phpcompatibility-wp": "^2.1",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.2"
+    },
+    "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": true,
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "scripts": {
+        "lint": "phpcs",
+        "lint:fix": "phpcbf",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "check": ["@lint", "@analyse"]
+    }
 }

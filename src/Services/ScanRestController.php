@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace GhostMediaHunter\Services;
 
 // Exit if accessed directly!
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 use GhostMediaHunter\Interfaces\Registrable;
 use WP_Error;
@@ -23,76 +23,81 @@ use WP_REST_Response;
  * Media > GMH Settings, generated on activation — see
  * Activate::run()).
  */
-class ScanRestController implements Registrable
-{
-    public const OPTION_KEY = 'gmh_scan_key';
+class ScanRestController implements Registrable {
 
-    private const NAMESPACE = 'ghost-media-hunter/v1';
-    private const ROUTE     = '/scan';
+	public const OPTION_KEY = 'gmh_scan_key';
 
-    private ScanRunner $runner;
+	private const NAMESPACE = 'ghost-media-hunter/v1';
+	private const ROUTE     = '/scan';
 
-    public function __construct(ScanRunner $runner)
-    {
-        $this->runner = $runner;
-    }
+	private ScanRunner $runner;
 
-    public function register(): void
-    {
-        add_action('rest_api_init', [$this, 'register_route']);
-    }
+	public function __construct( ScanRunner $runner ) {
+		$this->runner = $runner;
+	}
 
-    public function register_route(): void
-    {
-        register_rest_route(self::NAMESPACE, self::ROUTE, [
-            'methods'             => 'POST',
-            'callback'            => [$this, 'handle'],
-            'permission_callback' => [$this, 'authorize'],
-        ]);
-    }
+	public function register(): void {
+		add_action( 'rest_api_init', array( $this, 'register_route' ) );
+	}
 
-    /**
-     * @return true|WP_Error
-     */
-    public function authorize(WP_REST_Request $request)
-    {
-        $key = get_option(self::OPTION_KEY);
+	public function register_route(): void {
+		register_rest_route(
+			self::NAMESPACE,
+			self::ROUTE,
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'handle' ),
+				'permission_callback' => array( $this, 'authorize' ),
+			)
+		);
+	}
 
-        if (empty($key)) {
-            return new WP_Error(
-                'gmh_no_key',
-                __('Scan key not configured.', 'ghost-media-hunter'),
-                ['status' => 500]
-            );
-        }
+	/**
+	 * @return true|WP_Error
+	 */
+	public function authorize( WP_REST_Request $request ) {
+		$key = get_option( self::OPTION_KEY );
 
-        $provided = $request->get_header('X-GMH-Key');
+		if ( empty( $key ) ) {
+			return new WP_Error(
+				'gmh_no_key',
+				__( 'Scan key not configured.', 'ghost-media-hunter' ),
+				array( 'status' => 500 )
+			);
+		}
 
-        if (empty($provided) || !hash_equals((string) $key, (string) $provided)) {
-            return new WP_Error(
-                'gmh_unauthorized',
-                __('Invalid or missing key.', 'ghost-media-hunter'),
-                ['status' => 401]
-            );
-        }
+		$provided = $request->get_header( 'X-GMH-Key' );
 
-        return true;
-    }
+		if ( empty( $provided ) || ! hash_equals( (string) $key, (string) $provided ) ) {
+			return new WP_Error(
+				'gmh_unauthorized',
+				__( 'Invalid or missing key.', 'ghost-media-hunter' ),
+				array( 'status' => 401 )
+			);
+		}
 
-    public function handle(WP_REST_Request $request): WP_REST_Response
-    {
-        $scanned = $this->runner->run_all();
+		return true;
+	}
 
-        if ($scanned === null) {
-            return new WP_REST_Response([
-                'success' => false,
-                'message' => __('A scan is already in progress.', 'ghost-media-hunter'),
-            ], 409);
-        }
+	public function handle( WP_REST_Request $request ): WP_REST_Response {
+		$scanned = $this->runner->run_all();
 
-        return new WP_REST_Response([
-            'success' => true,
-            'scanned' => $scanned,
-        ], 200);
-    }
+		if ( $scanned === null ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'A scan is already in progress.', 'ghost-media-hunter' ),
+				),
+				409
+			);
+		}
+
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'scanned' => $scanned,
+			),
+			200
+		);
+	}
 }

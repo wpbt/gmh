@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace GhostMediaHunter\Services;
 
 // Exit if accessed directly!
-defined('ABSPATH') || exit;
+defined( 'ABSPATH' ) || exit;
 
 use GhostMediaHunter\Services\Scan\Engine;
 
@@ -22,50 +22,50 @@ use GhostMediaHunter\Services\Scan\Engine;
  * cron, and the REST trigger could all kick off a scan at the same
  * time with nothing stopping them.
  */
-class ScanRunner
-{
-    private const LOCK_KEY = 'gmh_scan_running';
+class ScanRunner {
 
-    // Safety net only — this is NOT the normal way the lock gets
-    // cleared (that's the try/finally below on every normal exit,
-    // success or failure). This only rescues a stuck lock if PHP dies
-    // hard enough that even `finally` never runs (a fatal error, the
-    // process getting killed mid-scan).
-    private const LOCK_TTL = 15 * MINUTE_IN_SECONDS;
+	private const LOCK_KEY = 'gmh_scan_running';
 
-    private Engine $engine;
+	// Safety net only — this is NOT the normal way the lock gets
+	// cleared (that's the try/finally below on every normal exit,
+	// success or failure). This only rescues a stuck lock if PHP dies
+	// hard enough that even `finally` never runs (a fatal error, the
+	// process getting killed mid-scan).
+	private const LOCK_TTL = 15 * MINUTE_IN_SECONDS;
 
-    public function __construct(Engine $engine)
-    {
-        $this->engine = $engine;
-    }
+	private Engine $engine;
 
-    /**
-     * Runs a full scan. Returns the number of attachments scanned, or
-     * null if a scan was already in progress and this call was
-     * skipped instead of overlapping it.
-     */
-    public function run_all(): ?int
-    {
-        if (get_transient(self::LOCK_KEY)) {
-            return null;
-        }
+	public function __construct( Engine $engine ) {
+		$this->engine = $engine;
+	}
 
-        set_transient(self::LOCK_KEY, true, self::LOCK_TTL);
+	/**
+	 * Runs a full scan. Returns the number of attachments scanned, or
+	 * null if a scan was already in progress and this call was
+	 * skipped instead of overlapping it.
+	 */
+	public function run_all(): ?int {
+		if ( get_transient( self::LOCK_KEY ) ) {
+			return null;
+		}
 
-        try {
-            $attachment_ids = get_posts([
-                'post_type'      => 'attachment',
-                'post_status'    => 'inherit',
-                'fields'         => 'ids',
-                'posts_per_page' => -1,
-            ]);
+		set_transient( self::LOCK_KEY, true, self::LOCK_TTL );
 
-            $this->engine->run_batch($attachment_ids);
+		try {
+			$attachment_ids = get_posts(
+				array(
+					'post_type'      => 'attachment',
+					'post_status'    => 'inherit',
+					'fields'         => 'ids',
+					'posts_per_page' => -1,
+				)
+			);
 
-            return count($attachment_ids);
-        } finally {
-            delete_transient(self::LOCK_KEY);
-        }
-    }
+			$this->engine->run_batch( $attachment_ids );
+
+			return count( $attachment_ids );
+		} finally {
+			delete_transient( self::LOCK_KEY );
+		}
+	}
 }
