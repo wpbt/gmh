@@ -1,4 +1,9 @@
 <?php
+/**
+ * Interface for checkers that determine whether an attachment is referenced somewhere, for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -22,14 +27,7 @@ interface CheckerInterface {
 	 * IdentifierResolver couldn't resolve the attachment (e.g. it no
 	 * longer exists) — checkers must treat that as "not found", not error.
 	 *
-	 * @param array{
-	 *     id: int,
-	 *     relative_path: string,
-	 *     filename: string,
-	 *     basename: string,
-	 *     extension: string,
-	 *     file_size: int
-	 * }|null $identifiers The array returned by IdentifierResolver::resolve().
+	 * @param array{id: int, relative_path: string, filename: string, basename: string, extension: string, file_size: int}|null $identifiers The array returned by IdentifierResolver::resolve().
 	 */
 	public function check( ?array $identifiers ): bool;
 }

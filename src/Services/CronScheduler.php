@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class responsible for wiring the scheduled scan cron hook for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -19,20 +24,38 @@ class CronScheduler implements Registrable {
 
 	public const HOOK = 'gmh_scheduled_scan';
 
+	/**
+	 * Shared runner used by the ajax/cron/REST entry points.
+	 *
+	 * @var ScanRunner
+	 */
 	private ScanRunner $runner;
 
+	/**
+	 * Constructor.
+	 *
+	 * @param ScanRunner $runner Shared scan runner.
+	 */
 	public function __construct( ScanRunner $runner ) {
 		$this->runner = $runner;
 	}
 
+	/**
+	 * Registers the scheduled-scan cron hook callback.
+	 */
 	public function register(): void {
 		add_action( self::HOOK, array( $this, 'handle' ) );
 	}
 
+	/**
+	 * Runs the scheduled scan, logging (not erroring) if one was
+	 * already in progress and this run was skipped.
+	 */
 	public function handle(): void {
 		$scanned = $this->runner->run_all();
 
-		if ( $scanned === null ) {
+		if ( null === $scanned ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- deliberate one-line notice when a scheduled scan is skipped due to overlap; not debug scaffolding.
 			error_log( 'Ghost Media Hunter: scheduled scan skipped — a scan was already in progress.' );
 		}
 	}

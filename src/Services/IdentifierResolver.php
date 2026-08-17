@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class responsible for resolving identifiers a checker needs for one attachment for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -16,6 +21,9 @@ defined( 'ABSPATH' ) || exit;
 class IdentifierResolver {
 
 	/**
+	 * Resolves the identifiers needed to search content for one attachment.
+	 *
+	 * @param int $attachment_id Attachment post ID.
 	 * @return array{
 	 *     id: int,
 	 *     relative_path: string,
@@ -28,7 +36,7 @@ class IdentifierResolver {
 	public function resolve( int $attachment_id ): ?array {
 		$url = wp_get_attachment_url( $attachment_id );
 
-		if ( $url === false ) {
+		if ( false === $url ) {
 			return null;
 		}
 
@@ -48,11 +56,13 @@ class IdentifierResolver {
 	 * Bytes on disk for the original file. Not used for matching —
 	 * this is metadata for later reporting (e.g. space reclaimed
 	 * over time) — kept separate from the identifier fields above.
+	 *
+	 * @param int $attachment_id Attachment post ID.
 	 */
 	private function file_size( int $attachment_id ): int {
 		$path = get_attached_file( $attachment_id );
 
-		if ( $path === false || ! file_exists( $path ) ) {
+		if ( false === $path || ! file_exists( $path ) ) {
 			return 0;
 		}
 
@@ -63,18 +73,20 @@ class IdentifierResolver {
 	 * Strip the site's uploads base URL (scheme + host + /wp-content/uploads)
 	 * so matching is resilient to domain changes, http->https migrations,
 	 * and CDN URL rewriting — checkers match on path only, not full URL.
+	 *
+	 * @param string $url Full attachment URL.
 	 */
 	private function to_relative_path( string $url ): string {
 		$upload_dir = wp_get_upload_dir();
 		$base_url   = $upload_dir['baseurl'] ?? '';
 
-		if ( $base_url !== '' && str_starts_with( $url, $base_url ) ) {
+		if ( '' !== $base_url && str_starts_with( $url, $base_url ) ) {
 			return ltrim( substr( $url, strlen( $base_url ) ), '/' );
 		}
 
 		// Fallback for unexpected setups: strip scheme + host, keep the path.
 		$path = wp_parse_url( $url, PHP_URL_PATH );
 
-		return $path !== null ? ltrim( $path, '/' ) : $url;
+		return null !== $path ? ltrim( $path, '/' ) : $url;
 	}
 }

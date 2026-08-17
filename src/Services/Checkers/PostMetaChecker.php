@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class responsible for checking post meta for attachment references for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -46,12 +51,20 @@ class PostMetaChecker implements CheckerInterface {
 		'gallery',
 	);
 
+	/**
+	 * Checker identifier used in matched_sources.
+	 */
 	public function name(): string {
 		return 'post_meta';
 	}
 
+	/**
+	 * Checks wp_postmeta for a meta value referencing this attachment ID.
+	 *
+	 * @param array{id: int, relative_path: string, filename: string, basename: string, extension: string, file_size: int}|null $identifiers Identifiers for the attachment, or null.
+	 */
 	public function check( ?array $identifiers ): bool {
-		if ( $identifiers === null ) {
+		if ( null === $identifiers ) {
 			return false;
 		}
 
@@ -59,19 +72,21 @@ class PostMetaChecker implements CheckerInterface {
 
 		$id = (string) $identifiers['id'];
 
-		// Plain scalar meta value: meta_value = '42'
+		// Plain scalar meta value: meta_value = '42'!
 		$exact = $id;
 
-		// Serialized string element, e.g. ACF gallery: s:2:"42";
+		// Serialized string element, e.g. ACF gallery: s:2:"42";!
 		$like_serialized_string = '%"' . $wpdb->esc_like( $id ) . '";%';
 
-		// Serialized int element, e.g. a:1:{i:0;i:42;}
+		// Serialized int element, e.g. a:1:{i:0;i:42;}!
 		$like_serialized_int = '%:' . $wpdb->esc_like( $id ) . ';%';
 
 		$keywords = get_option( 'gmh_checker_keywords', self::DEFAULT_KEYWORDS );
 
-		// See OptionsChecker::check() for why this guard is needed —
-		// get_option()'s default doesn't cover "exists but empty."
+		/**
+		 * See OptionsChecker::check() for why this guard is needed —
+		 * get_option()'s default doesn't cover "exists but empty."
+		 */
 		if ( ! is_array( $keywords ) || empty( $keywords ) ) {
 			$keywords = self::DEFAULT_KEYWORDS;
 		}
@@ -84,22 +99,30 @@ class PostMetaChecker implements CheckerInterface {
 		}
 		$keyword_sql = implode( ' OR ', $keyword_clauses );
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- built via $wpdb->prepare() below
+		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// Reason: replacement count is dynamic (one %s per configured keyword, plus 3
+		// fixed) — array_merge() builds it at runtime, which phpcs can't evaluate
+		// statically. $keyword_sql is built entirely from the static string
+		// 'pm.meta_key LIKE %s' repeated per keyword — no user input is interpolated,
+		// actual values are bound via $keyword_values. Custom pattern search across
+		// wp_postmeta, not covered by the Meta API; caching deferred to the SQL/
+		// performance review pass.
 		$sql = $wpdb->prepare(
 			"SELECT pm.post_id FROM {$wpdb->postmeta} pm
-             INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
-             WHERE pm.meta_key != '_thumbnail_id'
-             AND ({$keyword_sql})
-             AND p.post_status NOT IN ('trash', 'auto-draft')
-             AND (
-                 pm.meta_value = %s
-                 OR pm.meta_value LIKE %s
-                 OR pm.meta_value LIKE %s
-             )
-             LIMIT 1",
+			INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+			WHERE pm.meta_key != '_thumbnail_id'
+			AND ({$keyword_sql})
+			AND p.post_status NOT IN ('trash', 'auto-draft')
+			AND (
+				pm.meta_value = %s
+				OR pm.meta_value LIKE %s
+				OR pm.meta_value LIKE %s
+			)
+			LIMIT 1",
 			array_merge( $keyword_values, array( $exact, $like_serialized_string, $like_serialized_int ) )
 		);
 
-		return $wpdb->get_var( $sql ) !== null;
+		return null !== $wpdb->get_var( $sql );
+		// phpcs:enable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	}
 }

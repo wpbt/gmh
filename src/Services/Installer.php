@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class responsible for creating and versioning the scan-results table for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -7,12 +12,17 @@ namespace GhostMediaHunter\Services;
 // Exit if accessed directly!
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Creates the {prefix}_gmh_scan_results table on activation, via dbDelta.
+ */
 class Installer {
 
 	public const DB_VERSION        = '1.0.0';
 	public const DB_VERSION_OPTION = 'gmh_db_version';
 
 	/**
+	 * Table name (with prefix) and charset/collation for the results table.
+	 *
 	 * @return array{name: string, charset_collate: string}
 	 */
 	public static function table_info(): array {
@@ -24,6 +34,11 @@ class Installer {
 		);
 	}
 
+	/**
+	 * Creates the results table (via dbDelta) and records the current
+	 * DB_VERSION. Safe to call on every activation — dbDelta handles
+	 * both create and alter.
+	 */
 	public static function install(): void {
 		[ 'name' => $table_name, 'charset_collate' => $charset_collate ] = self::table_info();
 

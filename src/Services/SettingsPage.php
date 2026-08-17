@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class responsible for registering settings page for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -38,11 +43,17 @@ class SettingsPage implements Registrable {
 		'gallery',
 	);
 
+	/**
+	 * Registers the admin_menu and admin_init hooks for this service.
+	 */
 	public function register(): void {
 		add_action( 'admin_menu', array( $this, 'add_menu_page' ) );
 		add_action( 'admin_init', array( $this, 'register_settings' ) );
 	}
 
+	/**
+	 * Adds the "GMH Settings" submenu page under Media.
+	 */
 	public function add_menu_page(): void {
 		add_media_page(
 			__( 'Ghost Media Hunter Settings', 'ghost-media-hunter' ),
@@ -53,6 +64,9 @@ class SettingsPage implements Registrable {
 		);
 	}
 
+	/**
+	 * Registers settings, sections, and fields for the Settings API.
+	 */
 	public function register_settings(): void {
 		register_setting(
 			self::OPTION_GROUP,
@@ -105,6 +119,9 @@ class SettingsPage implements Registrable {
 		);
 	}
 
+	/**
+	 * Renders the intro text for the "External Trigger" section.
+	 */
 	public function render_rest_section_intro(): void {
 		esc_html_e(
 			'An external scheduler can trigger a scan reliably (independent of site traffic) by sending a POST request with this key.',
@@ -112,6 +129,9 @@ class SettingsPage implements Registrable {
 		);
 	}
 
+	/**
+	 * Renders the REST scan key field, with a regenerate checkbox.
+	 */
 	public function render_scan_key_field(): void {
 		$key = (string) get_option( ScanRestController::OPTION_KEY, '' );
 		?>
@@ -143,7 +163,14 @@ class SettingsPage implements Registrable {
 		<?php
 	}
 
+	/**
+	 * Sanitizes the scan key setting, regenerating it if requested.
+	 *
+	 * @param string $value Submitted value (ignored if regenerating).
+	 * @return string
+	 */
 	public function sanitize_scan_key( string $value ): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified upstream by the Settings API (options.php) before sanitize callbacks run.
 		if ( ! empty( $_POST['gmh_scan_key_regenerate'] ) ) {
 			return wp_generate_password( 32, false, false );
 		}
@@ -151,6 +178,9 @@ class SettingsPage implements Registrable {
 		return $value;
 	}
 
+	/**
+	 * Renders the intro text for the "Checker Matching" section.
+	 */
 	public function render_checker_section_intro(): void {
 		esc_html_e(
 			'Post meta and option keys must contain one of these words before their value is checked against an attachment ID — this narrows matching to cut down on false positives (e.g. an unrelated numeric setting coincidentally matching an attachment ID). Used by the "post_meta" and "options" checkers.',
@@ -158,6 +188,9 @@ class SettingsPage implements Registrable {
 		);
 	}
 
+	/**
+	 * Renders the checker match-keywords field.
+	 */
 	public function render_keywords_field(): void {
 		$keywords = get_option( self::KEYWORDS_OPTION, self::DEFAULT_KEYWORDS );
 
@@ -178,14 +211,16 @@ class SettingsPage implements Registrable {
 	}
 
 	/**
-	 * @param mixed $value
+	 * Sanitizes the checker match-keywords setting into a lowercase, deduped array.
+	 *
+	 * @param mixed $value Raw submitted value (comma-separated string expected).
 	 * @return string[]
 	 */
 	public function sanitize_keywords( $value ): array {
 		$parts = explode( ',', (string) $value );
 		$parts = array_map( 'trim', $parts );
 		$parts = array_map( 'strtolower', $parts );
-		$parts = array_filter( $parts, static fn ( $word ) => $word !== '' );
+		$parts = array_filter( $parts, static fn ( $word ) => '' !== $word );
 		$parts = array_values( array_unique( $parts ) );
 
 		if ( empty( $parts ) ) {
@@ -205,6 +240,9 @@ class SettingsPage implements Registrable {
 		return $parts;
 	}
 
+	/**
+	 * Renders the settings page markup.
+	 */
 	public function render_page(): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;

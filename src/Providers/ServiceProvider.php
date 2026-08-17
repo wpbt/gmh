@@ -1,4 +1,9 @@
 <?php
+/**
+ * Resolves every service and its dependencies for the plugin's DI container.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -24,6 +29,11 @@ use GhostMediaHunter\Services\ScanTrigger;
 use GhostMediaHunter\Services\CronScheduler;
 use GhostMediaHunter\Services\SettingsPage;
 
+/**
+ * Builds the closure map handed to Container — one entry per
+ * service, each closure resolving that service's dependencies
+ * (via $c->get()) before constructing it.
+ */
 class ServiceProvider {
 
 	/**
@@ -33,28 +43,28 @@ class ServiceProvider {
 	 */
 	public static function get_services(): array {
 		return array(
-			ScanResultsRepository::class => function ( $c ) {
+			ScanResultsRepository::class => function () {
 				return new ScanResultsRepository();
 			},
-			IdentifierResolver::class    => function ( $c ) {
+			IdentifierResolver::class    => function () {
 				return new IdentifierResolver();
 			},
-			PostContentChecker::class    => function ( $c ) {
+			PostContentChecker::class    => function () {
 				return new PostContentChecker();
 			},
-			FeaturedImageChecker::class  => function ( $c ) {
+			FeaturedImageChecker::class  => function () {
 				return new FeaturedImageChecker();
 			},
-			PostMetaChecker::class       => function ( $c ) {
+			PostMetaChecker::class       => function () {
 				return new PostMetaChecker();
 			},
-			OptionsChecker::class        => function ( $c ) {
+			OptionsChecker::class        => function () {
 				return new OptionsChecker();
 			},
-			WidgetChecker::class         => function ( $c ) {
+			WidgetChecker::class         => function () {
 				return new WidgetChecker();
 			},
-			MenuChecker::class           => function ( $c ) {
+			MenuChecker::class           => function () {
 				return new MenuChecker();
 			},
 			Engine::class                => function ( $c ) {
@@ -86,7 +96,7 @@ class ServiceProvider {
 			ScanRestController::class    => function ( $c ) {
 				return new ScanRestController( $c->get( ScanRunner::class ) );
 			},
-			SettingsPage::class          => function ( $c ) {
+			SettingsPage::class          => function () {
 				return new SettingsPage();
 			},
 			ResultActions::class         => function ( $c ) {

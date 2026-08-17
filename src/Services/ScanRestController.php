@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class responsible for the external REST scan-trigger endpoint for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -30,16 +35,32 @@ class ScanRestController implements Registrable {
 	private const NAMESPACE = 'ghost-media-hunter/v1';
 	private const ROUTE     = '/scan';
 
+	/**
+	 * Shared runner used by the ajax/cron/REST entry points.
+	 *
+	 * @var ScanRunner
+	 */
 	private ScanRunner $runner;
 
+	/**
+	 * Constructor.
+	 *
+	 * @param ScanRunner $runner Shared scan runner.
+	 */
 	public function __construct( ScanRunner $runner ) {
 		$this->runner = $runner;
 	}
 
+	/**
+	 * Registers the rest_api_init hook.
+	 */
 	public function register(): void {
 		add_action( 'rest_api_init', array( $this, 'register_route' ) );
 	}
 
+	/**
+	 * Registers the POST /scan REST route.
+	 */
 	public function register_route(): void {
 		register_rest_route(
 			self::NAMESPACE,
@@ -53,6 +74,9 @@ class ScanRestController implements Registrable {
 	}
 
 	/**
+	 * Verifies the X-GMH-Key header against the configured scan key.
+	 *
+	 * @param WP_REST_Request $request The incoming REST request.
 	 * @return true|WP_Error
 	 */
 	public function authorize( WP_REST_Request $request ) {
@@ -79,10 +103,15 @@ class ScanRestController implements Registrable {
 		return true;
 	}
 
+	/**
+	 * Handles the REST scan request.
+	 *
+	 * @param WP_REST_Request $request The incoming REST request.
+	 */
 	public function handle( WP_REST_Request $request ): WP_REST_Response {
 		$scanned = $this->runner->run_all();
 
-		if ( $scanned === null ) {
+		if ( null === $scanned ) {
 			return new WP_REST_Response(
 				array(
 					'success' => false,

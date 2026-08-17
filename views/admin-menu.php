@@ -8,24 +8,24 @@
 
 declare(strict_types=1);
 
-$results   = $data['results'];
-$total     = $data['total'];
-$page      = $data['page'];
-$per_page  = $data['per_page'];
-$view      = $data['view'];
-$last_page = (int) max( 1, ceil( $total / $per_page ) );
+$gmh_results   = $data['results'];
+$gmh_total     = $data['total'];
+$gmh_page      = $data['page'];
+$gmh_per_page  = $data['per_page'];
+$gmh_view      = $data['view'];
+$gmh_last_page = (int) max( 1, ceil( $gmh_total / $gmh_per_page ) );
 ?>
 <div class="wrap">
 	<h1><?php echo esc_html( $data['title'] ); ?></h1>
 
 	<h2 class="nav-tab-wrapper">
-		<a href="<?php echo esc_url( remove_query_arg( array( 'view', 'paged' ) ) ); ?>" class="nav-tab <?php echo 'unused' === $view ? 'nav-tab-active' : ''; ?>">
+		<a href="<?php echo esc_url( remove_query_arg( array( 'view', 'paged' ) ) ); ?>" class="nav-tab <?php echo 'unused' === $gmh_view ? 'nav-tab-active' : ''; ?>">
 			<?php
 			/* translators: %d: Number of media items that are unused in the site. */
 			printf( esc_html__( 'Unused (%d)', 'ghost-media-hunter' ), (int) $data['unused_total'] );
 			?>
 		</a>
-		<a href="<?php echo esc_url( add_query_arg( array( 'view' => 'kept' ), remove_query_arg( 'paged' ) ) ); ?>" class="nav-tab <?php echo 'kept' === $view ? 'nav-tab-active' : ''; ?>">
+		<a href="<?php echo esc_url( add_query_arg( array( 'view' => 'kept' ), remove_query_arg( 'paged' ) ) ); ?>" class="nav-tab <?php echo 'kept' === $gmh_view ? 'nav-tab-active' : ''; ?>">
 			<?php
 			/* translators: %d: Number of media items that are being kept. */
 			printf( esc_html__( 'Kept (%d)', 'ghost-media-hunter' ), (int) $data['kept_total'] );
@@ -35,7 +35,7 @@ $last_page = (int) max( 1, ceil( $total / $per_page ) );
 
 	<p>
 		<?php
-		if ( 'kept' === $view ) :
+		if ( 'kept' === $gmh_view ) :
 			?>
 			<?php esc_html_e( 'Files you\'ve marked "Keep" — excluded from the Unused list even if the scanner still can\'t find a reference to them.', 'ghost-media-hunter' ); ?>
 			<?php
@@ -143,11 +143,11 @@ $last_page = (int) max( 1, ceil( $total / $per_page ) );
 	</script>
 
 	<?php
-	if ( empty( $results ) ) :
+	if ( empty( $gmh_results ) ) :
 		?>
 		<p>
 			<?php
-			if ( 'kept' === $view ) :
+			if ( 'kept' === $gmh_view ) :
 				?>
 				<?php esc_html_e( 'Nothing kept yet.', 'ghost-media-hunter' ); ?>
 				<?php
@@ -172,22 +172,22 @@ $last_page = (int) max( 1, ceil( $total / $per_page ) );
 			</thead>
 			<tbody>
 				<?php
-				foreach ( $results as $row ) :
+				foreach ( $gmh_results as $row ) :
 					?>
 					<?php
 						$edit_link = get_edit_post_link( (int) $row->attachment_id );
-						$title     = get_the_title( (int) $row->attachment_id );
-						$title     = '' !== $title ? $title : sprintf( '#%d', $row->attachment_id );
+						$gmh_title = get_the_title( (int) $row->attachment_id );
+						$gmh_title = '' !== $gmh_title ? $gmh_title : sprintf( '#%d', $row->attachment_id );
 					?>
 					<tr>
 						<td>
 							<?php
 							if ( $edit_link ) :
 								?>
-								<a href="<?php echo esc_url( $edit_link ); ?>"><?php echo esc_html( $title ); ?></a>
+								<a href="<?php echo esc_url( $edit_link ); ?>"><?php echo esc_html( $gmh_title ); ?></a>
 								<?php
 							else :
-								echo esc_html( $title );
+								echo esc_html( $gmh_title );
 							endif;
 							?>
 						</td>
@@ -195,7 +195,7 @@ $last_page = (int) max( 1, ceil( $total / $per_page ) );
 						<td><?php echo esc_html( $row->last_checked ); ?></td>
 						<td>
 							<?php
-							if ( 'kept' === $view ) :
+							if ( 'kept' === $gmh_view ) :
 								?>
 								<button
 									type="button"
@@ -234,13 +234,13 @@ $last_page = (int) max( 1, ceil( $total / $per_page ) );
 		</table>
 
 		<?php
-		if ( $last_page > 1 ) :
+		if ( $gmh_last_page > 1 ) :
 			?>
 			<p class="tablenav-pages">
 				<?php
-				if ( $page > 1 ) :
+				if ( $gmh_page > 1 ) :
 					?>
-					<a class="button" href="<?php echo esc_url( add_query_arg( 'paged', $page - 1 ) ); ?>">
+					<a class="button" href="<?php echo esc_url( add_query_arg( 'paged', $gmh_page - 1 ) ); ?>">
 						<?php esc_html_e( 'Previous', 'ghost-media-hunter' ); ?>
 					</a>
 					<?php
@@ -252,16 +252,16 @@ $last_page = (int) max( 1, ceil( $total / $per_page ) );
 					printf(
 						/* translators: %1$d: Current page number. %2$d: Total number of pages. */
 						esc_html__( 'Page %1$d of %2$d', 'ghost-media-hunter' ),
-						(int) $page,
-						(int) $last_page
+						(int) $gmh_page,
+						(int) $gmh_last_page
 					);
 					?>
 				</span>
 
 				<?php
-				if ( $page < $last_page ) :
+				if ( $gmh_page < $gmh_last_page ) :
 					?>
-					<a class="button" href="<?php echo esc_url( add_query_arg( 'paged', $page + 1 ) ); ?>">
+					<a class="button" href="<?php echo esc_url( add_query_arg( 'paged', $gmh_page + 1 ) ); ?>">
 						<?php esc_html_e( 'Next', 'ghost-media-hunter' ); ?>
 					</a>
 					<?php

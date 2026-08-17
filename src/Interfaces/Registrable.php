@@ -1,4 +1,9 @@
 <?php
+/**
+ * Interface for services that hook into WordPress, for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 

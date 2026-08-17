@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class responsible for checking nav menu items for attachment references for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -22,12 +27,21 @@ use GhostMediaHunter\Interfaces\CheckerInterface;
  */
 class MenuChecker implements CheckerInterface {
 
+	/**
+	 * Checker identifier used in matched_sources.
+	 */
 	public function name(): string {
 		return 'menus';
 	}
 
+	/**
+	 * Checks nav menu custom-link items for a URL referencing this
+	 * attachment's file.
+	 *
+	 * @param array{id: int, relative_path: string, filename: string, basename: string, extension: string, file_size: int}|null $identifiers Identifiers for the attachment, or null.
+	 */
 	public function check( ?array $identifiers ): bool {
-		if ( $identifiers === null ) {
+		if ( null === $identifiers ) {
 			return false;
 		}
 
@@ -37,21 +51,21 @@ class MenuChecker implements CheckerInterface {
 		$like_resized = '%' . $wpdb->esc_like( $identifiers['basename'] . '-' ) . '%'
 			. $wpdb->esc_like( '.' . $identifiers['extension'] ) . '%';
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- built via $wpdb->prepare() below
-		$sql = $wpdb->prepare(
-			"SELECT pm.post_id FROM {$wpdb->postmeta} pm
-             INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
-             WHERE pm.meta_key = '_menu_item_url'
-             AND p.post_status NOT IN ('trash', 'auto-draft')
-             AND (
-                 pm.meta_value LIKE %s
-                 OR pm.meta_value LIKE %s
-             )
-             LIMIT 1",
-			$like_path,
-			$like_resized
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom pattern search across wp_postmeta, not covered by the Meta API; caching deferred to the SQL/performance review pass.
+		return null !== $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT pm.post_id FROM {$wpdb->postmeta} pm
+				INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id
+				WHERE pm.meta_key = '_menu_item_url'
+				AND p.post_status NOT IN ('trash', 'auto-draft')
+				AND (
+					pm.meta_value LIKE %s
+					OR pm.meta_value LIKE %s
+				)
+				LIMIT 1",
+				$like_path,
+				$like_resized
+			)
 		);
-
-		return $wpdb->get_var( $sql ) !== null;
 	}
 }

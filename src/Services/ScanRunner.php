@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class responsible for running a full scan across all attachments for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -33,8 +38,18 @@ class ScanRunner {
 	// process getting killed mid-scan).
 	private const LOCK_TTL = 15 * MINUTE_IN_SECONDS;
 
+	/**
+	 * Scan engine used to run checkers against each attachment.
+	 *
+	 * @var Engine
+	 */
 	private Engine $engine;
 
+	/**
+	 * Constructor.
+	 *
+	 * @param Engine $engine Scan engine used to run checkers against each attachment.
+	 */
 	public function __construct( Engine $engine ) {
 		$this->engine = $engine;
 	}

@@ -1,4 +1,9 @@
 <?php
+/**
+ * Main plugin bootstrap/singleton class for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -11,9 +16,25 @@ use GhostMediaHunter\Core\Container;
 use GhostMediaHunter\Interfaces\Registrable;
 use GhostMediaHunter\Providers\ServiceProvider;
 
+/**
+ * Singleton entry point: builds the Container, registers every
+ * service from ServiceProvider, then hooks the Registrable ones
+ * into WordPress.
+ */
 class Plugin {
 
+	/**
+	 * Singleton instance.
+	 *
+	 * @var self|null
+	 */
 	private static ?Plugin $instance = null;
+
+	/**
+	 * DI container holding every registered service.
+	 *
+	 * @var Container
+	 */
 	private Container $container;
 
 	/**
@@ -23,18 +44,27 @@ class Plugin {
 		$this->container = new Container();
 	}
 
+	/**
+	 * Returns the singleton instance, creating it on first call.
+	 */
 	public static function get_instance(): self {
-		if ( self::$instance === null ) {
+		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
 		return self::$instance;
 	}
 
+	/**
+	 * Registers services then hooks them into WordPress.
+	 */
 	public function init(): void {
 		$this->register_services();
 		$this->register_hooks();
 	}
 
+	/**
+	 * Resolves every service from ServiceProvider into the container.
+	 */
 	private function register_services(): void {
 		$services = ServiceProvider::get_services();
 
@@ -43,8 +73,12 @@ class Plugin {
 		}
 	}
 
+	/**
+	 * Hooks the plugin textdomain, then registers every Registrable
+	 * service resolved from the container.
+	 */
 	private function register_hooks(): void {
-		// Load plugin textdomain
+		// Load plugin textdomain!
 		add_action( 'init', array( $this, 'load_text_domain' ) );
 
 		foreach ( $this->container->get_registered_services() as $service ) {
@@ -55,6 +89,9 @@ class Plugin {
 		}
 	}
 
+	/**
+	 * Loads the plugin's text domain for translations.
+	 */
 	public function load_text_domain(): void {
 		load_plugin_textdomain(
 			'ghost-media-hunter',
@@ -70,7 +107,9 @@ class Plugin {
 	}
 
 	/**
-	 * Prevent unserialization
+	 * Prevent unserialization.
+	 *
+	 * @throws \Exception Always — unserializing a singleton is not supported.
 	 */
 	public function __wakeup() {
 		throw new \Exception( 'Cannot unserialize singleton' );

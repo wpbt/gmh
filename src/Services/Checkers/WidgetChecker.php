@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class responsible for checking widget options for attachment references for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -25,12 +30,20 @@ use GhostMediaHunter\Interfaces\CheckerInterface;
  */
 class WidgetChecker implements CheckerInterface {
 
+	/**
+	 * Checker identifier used in matched_sources.
+	 */
 	public function name(): string {
 		return 'widgets';
 	}
 
+	/**
+	 * Checks wp_options for a widget referencing this attachment.
+	 *
+	 * @param array{id: int, relative_path: string, filename: string, basename: string, extension: string, file_size: int}|null $identifiers Identifiers for the attachment, or null.
+	 */
 	public function check( ?array $identifiers ): bool {
-		if ( $identifiers === null ) {
+		if ( null === $identifiers ) {
 			return false;
 		}
 
@@ -41,24 +54,18 @@ class WidgetChecker implements CheckerInterface {
 		$like_path          = '%' . $wpdb->esc_like( $identifiers['relative_path'] ) . '%';
 		$like_resized       = '%' . $wpdb->esc_like( $identifiers['basename'] . '-' ) . '%'
 			. $wpdb->esc_like( '.' . $identifiers['extension'] ) . '%';
+		$like_option_name   = $wpdb->esc_like( 'widget_' ) . '%';
 
-        // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- built via $wpdb->prepare() below
-		$sql = $wpdb->prepare(
-			"SELECT option_id FROM {$wpdb->options}
-             WHERE option_name LIKE 'widget\\_%'
-             AND (
-                 option_value LIKE %s
-                 OR option_value LIKE %s
-                 OR option_value LIKE %s
-                 OR option_value LIKE %s
-             )
-             LIMIT 1",
-			$like_attachment_id,
-			$like_class,
-			$like_path,
-			$like_resized
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom pattern search across wp_options, not covered by the Options API; caching deferred to the SQL/performance review pass.
+		return null !== $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT option_id FROM {$wpdb->options} WHERE option_name LIKE %s AND ( option_value LIKE %s OR option_value LIKE %s OR option_value LIKE %s OR option_value LIKE %s ) LIMIT 1", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $wpdb->options is WordPress core, not user input
+				$like_option_name,
+				$like_attachment_id,
+				$like_class,
+				$like_path,
+				$like_resized
+			)
 		);
-
-		return $wpdb->get_var( $sql ) !== null;
 	}
 }

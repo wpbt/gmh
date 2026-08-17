@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class responsible for plugin activation setup for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -7,6 +12,11 @@ namespace GhostMediaHunter\Services;
 // Exit if accessed directly!
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Runs on plugin activation — creates the results table, schedules
+ * the daily cron scan, and seeds the scan key and checker keywords
+ * if they don't already exist.
+ */
 class Activate {
 
 	private const DEFAULT_CHECKER_KEYWORDS = array(
@@ -22,6 +32,11 @@ class Activate {
 		'gallery',
 	);
 
+	/**
+	 * Installs the table, schedules cron, and seeds default options.
+	 * Guarded so re-activation doesn't reschedule cron or clobber an
+	 * existing scan key/keyword list.
+	 */
 	public static function run(): void {
 		Installer::install();
 

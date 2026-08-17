@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class responsible for triggering scans for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -19,16 +24,32 @@ class ScanTrigger implements Registrable {
 
 	public const ACTION = 'gmh_scan_now';
 
+	/**
+	 * Shared runner used by the ajax/cron/REST entry points.
+	 *
+	 * @var ScanRunner
+	 */
 	private ScanRunner $runner;
 
+	/**
+	 * Constructor.
+	 *
+	 * @param ScanRunner $runner Shared scan runner.
+	 */
 	public function __construct( ScanRunner $runner ) {
 		$this->runner = $runner;
 	}
 
+	/**
+	 * Registers the wp_ajax hook for the "Scan now" button.
+	 */
 	public function register(): void {
 		add_action( 'wp_ajax_' . self::ACTION, array( $this, 'handle' ) );
 	}
 
+	/**
+	 * Handles the ajax "Scan now" request.
+	 */
 	public function handle(): void {
 		check_ajax_referer( self::ACTION );
 
@@ -38,7 +59,7 @@ class ScanTrigger implements Registrable {
 
 		$scanned = $this->runner->run_all();
 
-		if ( $scanned === null ) {
+		if ( null === $scanned ) {
 			wp_send_json_error(
 				array( 'message' => __( 'A scan is already in progress.', 'ghost-media-hunter' ) ),
 				409

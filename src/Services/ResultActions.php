@@ -1,4 +1,9 @@
 <?php
+/**
+ * Class responsible for per-row Keep/Restore/Delete actions on scan results for ghost media hunter plugin.
+ *
+ * @package GhostMediaHunter
+ */
 
 declare(strict_types=1);
 
@@ -30,18 +35,34 @@ class ResultActions implements Registrable {
 	public const ACTION_RESTORE = 'gmh_restore_kept';
 	public const ACTION_DELETE  = 'gmh_delete_attachment';
 
+	/**
+	 * Repository for reading and writing scan results.
+	 *
+	 * @var ScanResultsRepository
+	 */
 	private ScanResultsRepository $repository;
 
+	/**
+	 * Constructor.
+	 *
+	 * @param ScanResultsRepository $repository Repository for reading and writing scan results.
+	 */
 	public function __construct( ScanResultsRepository $repository ) {
 		$this->repository = $repository;
 	}
 
+	/**
+	 * Registers the wp_ajax hooks for Keep, Restore, and Delete.
+	 */
 	public function register(): void {
 		add_action( 'wp_ajax_' . self::ACTION_KEEP, array( $this, 'handle_keep' ) );
 		add_action( 'wp_ajax_' . self::ACTION_RESTORE, array( $this, 'handle_restore' ) );
 		add_action( 'wp_ajax_' . self::ACTION_DELETE, array( $this, 'handle_delete' ) );
 	}
 
+	/**
+	 * Handles the ajax "Keep" request — whitelists an attachment.
+	 */
 	public function handle_keep(): void {
 		$attachment_id = $this->authorize_and_get_id( self::ACTION_KEEP );
 
@@ -50,6 +71,9 @@ class ResultActions implements Registrable {
 		wp_send_json_success( array( 'attachment_id' => $attachment_id ) );
 	}
 
+	/**
+	 * Handles the ajax "Restore" request — un-whitelists a kept attachment.
+	 */
 	public function handle_restore(): void {
 		$attachment_id = $this->authorize_and_get_id( self::ACTION_RESTORE );
 
@@ -58,6 +82,10 @@ class ResultActions implements Registrable {
 		wp_send_json_success( array( 'attachment_id' => $attachment_id ) );
 	}
 
+	/**
+	 * Handles the ajax "Delete" request — permanently deletes the
+	 * attachment (unless MEDIA_TRASH is enabled) and its result row.
+	 */
 	public function handle_delete(): void {
 		$attachment_id = $this->authorize_and_get_id( self::ACTION_DELETE );
 
@@ -80,6 +108,8 @@ class ResultActions implements Registrable {
 	 * Ends the request (via check_ajax_referer / wp_send_json_error)
 	 * on failure, so a normal return only happens once everything's
 	 * valid.
+	 *
+	 * @param string $action The wp_ajax action name, used as the nonce action.
 	 */
 	private function authorize_and_get_id( string $action ): int {
 		check_ajax_referer( $action );
