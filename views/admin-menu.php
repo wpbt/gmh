@@ -9,6 +9,8 @@
 declare(strict_types=1);
 
 /**
+ * Data passed to this view from AdminMenu::render_page().
+ *
  * @var array{
  *     title: string,
  *     view: string,
