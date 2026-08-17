@@ -8,6 +8,19 @@
 
 declare(strict_types=1);
 
+/**
+ * @var array{
+ *     title: string,
+ *     view: string,
+ *     page: int,
+ *     per_page: int,
+ *     unused_total: int,
+ *     kept_total: int,
+ *     results: array<int, object>,
+ *     total: int
+ * } $data Passed in from AdminMenu::render_page().
+ */
+
 $gmh_results   = $data['results'];
 $gmh_total     = $data['total'];
 $gmh_page      = $data['page'];
