@@ -7,6 +7,16 @@
 
 declare(strict_types=1);
 
+/**
+ * Data passed to this view from SettingsPage::render_page().
+ *
+ * @var array{
+ *     title: string,
+ *     option_group: string,
+ *     page_slug: int
+ * } $data Passed in from SettingsPage::render_page().
+ */
+
 ?>
 <div class="wrap">
 	<h1><?php echo esc_html( $data['title'] ); ?></h1>

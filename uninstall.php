@@ -11,13 +11,11 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 global $wpdb;
 
-// Delete PLUGIN DB table(s).
 $table = $wpdb->prefix . 'gmh_scan_results';
 
 // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Table is built from $wpdb->prefix and used during plugin cleanup.
 $wpdb->query( "DROP TABLE IF EXISTS {$table}" );
 
-// Delete PLUGIN options!
 delete_option( 'gmh_db_version' );
 delete_option( 'gmh_scan_key' );
 delete_option( 'gmh_checker_keywords' );

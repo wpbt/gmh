@@ -104,7 +104,7 @@ class ResultActions implements Registrable {
 	}
 
 	/**
-	 * Shared nonce + capability + input check for both actions.
+	 * Shared nonce + capability + input check for all three actions.
 	 * Ends the request (via check_ajax_referer / wp_send_json_error)
 	 * on failure, so a normal return only happens once everything's
 	 * valid.

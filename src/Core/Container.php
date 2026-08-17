@@ -48,17 +48,14 @@ class Container {
 	 * @throws \Exception If no service is registered under that name.
 	 */
 	public function get( string $name ): object {
-		// Make sure the service is set first.
 		if ( ! isset( $this->services[ $name ] ) ) {
 			throw new \Exception( esc_html( "Service '{$name}' not found in container" ) );
 		}
 
-		// Return existing instance if already created.
 		if ( null !== $this->services[ $name ]['instance'] ) {
 			return $this->services[ $name ]['instance'];
 		}
 
-		// Create and store the instance.
 		$resolver                            = $this->services[ $name ]['resolver'];
 		$this->services[ $name ]['instance'] = $resolver( $this );
 
