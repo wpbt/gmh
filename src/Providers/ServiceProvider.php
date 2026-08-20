@@ -14,11 +14,9 @@ defined( 'ABSPATH' ) || exit;
 
 use GhostMediaHunter\Services\AdminMenu;
 use GhostMediaHunter\Services\Checkers\OptionsChecker;
-use GhostMediaHunter\Services\Checkers\MenuChecker;
 use GhostMediaHunter\Services\Checkers\PostContentChecker;
 use GhostMediaHunter\Services\Checkers\FeaturedImageChecker;
 use GhostMediaHunter\Services\Checkers\PostMetaChecker;
-use GhostMediaHunter\Services\Checkers\WidgetChecker;
 use GhostMediaHunter\Services\IdentifierResolver;
 use GhostMediaHunter\Services\Scan\Engine;
 use GhostMediaHunter\Services\ResultActions;
@@ -61,12 +59,6 @@ class ServiceProvider {
 			OptionsChecker::class        => function () {
 				return new OptionsChecker();
 			},
-			WidgetChecker::class         => function () {
-				return new WidgetChecker();
-			},
-			MenuChecker::class           => function () {
-				return new MenuChecker();
-			},
 			Engine::class                => function ( $c ) {
 				return new Engine(
 					$c->get( IdentifierResolver::class ),
@@ -76,8 +68,6 @@ class ServiceProvider {
 						$c->get( FeaturedImageChecker::class ),
 						$c->get( PostMetaChecker::class ),
 						$c->get( OptionsChecker::class ),
-						$c->get( WidgetChecker::class ),
-						$c->get( MenuChecker::class ),
 					)
 				);
 			},
