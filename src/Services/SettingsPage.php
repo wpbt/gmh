@@ -13,6 +13,7 @@ namespace GhostMediaHunter\Services;
 defined( 'ABSPATH' ) || exit;
 
 use GhostMediaHunter\Interfaces\Registrable;
+use GhostMediaHunter\Services\Checkers\PostContentChecker;
 
 /**
  * Settings page (Media > GMH Settings). Two sections so far: the REST
@@ -22,11 +23,12 @@ use GhostMediaHunter\Interfaces\Registrable;
  */
 class SettingsPage implements Registrable {
 
-	public const SLUG             = 'ghost-media-hunter-settings';
-	public const OPTION_GROUP     = 'gmh_settings';
-	private const REST_SECTION    = 'gmh_rest_section';
-	private const CHECKER_SECTION = 'gmh_checker_section';
-	private const KEYWORDS_OPTION = 'gmh_checker_keywords';
+	public const SLUG                  = 'ghost-media-hunter-settings';
+	public const OPTION_GROUP          = 'gmh_settings';
+	private const REST_SECTION         = 'gmh_rest_section';
+	private const CHECKER_SECTION      = 'gmh_checker_section';
+	private const KEYWORDS_OPTION      = 'gmh_checker_keywords';
+	private const POST_CONTENT_SECTION = 'gmh_post_content_section';
 
 	// Kept in sync with the same list in Activate::run() and the
 	// DEFAULT_KEYWORDS fallback in OptionsChecker/PostMetaChecker.
@@ -117,6 +119,31 @@ class SettingsPage implements Registrable {
 			self::SLUG,
 			self::CHECKER_SECTION
 		);
+
+		register_setting(
+			self::OPTION_GROUP,
+			PostContentChecker::INCLUDE_REVISIONS_OPTION,
+			array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'default'           => false,
+			)
+		);
+
+		add_settings_section(
+			self::POST_CONTENT_SECTION,
+			__( 'Post Content Scanning', 'ghost-media-hunter' ),
+			array( $this, 'render_post_content_section_intro' ),
+			self::SLUG
+		);
+
+		add_settings_field(
+			PostContentChecker::INCLUDE_REVISIONS_OPTION,
+			__( 'Include revisions', 'ghost-media-hunter' ),
+			array( $this, 'render_include_revisions_field' ),
+			self::SLUG,
+			self::POST_CONTENT_SECTION
+		);
 	}
 
 	/**
@@ -206,6 +233,47 @@ class SettingsPage implements Registrable {
 		/>
 		<p class="description">
 			<?php esc_html_e( 'Comma-separated. Matching is case-insensitive and checks whether a key contains each word (not an exact match).', 'ghost-media-hunter' ); ?>
+		</p>
+		<?php
+	}
+
+	/**
+	 * Renders the intro text for the "Post Content Scanning" section.
+	 */
+	public function render_post_content_section_intro(): void {
+		esc_html_e(
+			'Controls how the "post_content" checker treats WordPress revisions.',
+			'ghost-media-hunter'
+		);
+	}
+
+	/**
+	 * Renders the include-revisions checkbox field.
+	 */
+	public function render_include_revisions_field(): void {
+		$include_revisions = (bool) get_option( PostContentChecker::INCLUDE_REVISIONS_OPTION, false );
+		?>
+		<input
+			type="hidden"
+			name="<?php echo esc_attr( PostContentChecker::INCLUDE_REVISIONS_OPTION ); ?>"
+			value="0"
+		/>
+		<label>
+			<input
+				type="checkbox"
+				name="<?php echo esc_attr( PostContentChecker::INCLUDE_REVISIONS_OPTION ); ?>"
+				value="1"
+				<?php checked( $include_revisions ); ?>
+			/>
+			<?php esc_html_e( 'Also match images referenced only in old revisions', 'ghost-media-hunter' ); ?>
+		</label>
+		<p class="description">
+			<?php
+			esc_html_e(
+				'Off by default: an image no longer referenced in the live content is "unused" even if an old revision still mentions it. Turning this on is more conservative — an image stays "used" as long as ANY past revision references it. On sites with a long revision history (or unlimited revisions), this can mean most images never show as unused, even long after removal.',
+				'ghost-media-hunter'
+			);
+			?>
 		</p>
 		<?php
 	}
