@@ -75,7 +75,7 @@ class PostContentChecker implements CheckerInterface {
 		$like_class   = '%' . $wpdb->esc_like( 'wp-image-' . $identifiers['id'] ) . '%';
 		$like_path    = '%' . $wpdb->esc_like( $identifiers['relative_path'] ) . '%';
 		$like_resized = '%' . $wpdb->esc_like( $identifiers['basename'] . '-' ) . '%'
-			. $wpdb->esc_like( '.' . $identifiers['extension'] ) . '%';
+							. $wpdb->esc_like( '.' . $identifiers['extension'] ) . '%';
 
 		$include_revisions = (bool) get_option( self::INCLUDE_REVISIONS_OPTION, false );
 		$revision_clause   = $include_revisions ? '' : "AND post_type != 'revision'";
