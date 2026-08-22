@@ -18,6 +18,6 @@ $wpdb->query( "DROP TABLE IF EXISTS {$table}" );
 
 delete_option( 'gmh_db_version' );
 delete_option( 'gmh_scan_key' );
-delete_option( 'gmh_checker_keywords' );
+delete_option( 'gmh_custom_rules' );
 
 wp_clear_scheduled_hook( 'gmh_scheduled_scan' );
