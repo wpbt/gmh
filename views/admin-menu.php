@@ -18,6 +18,7 @@ declare(strict_types=1);
  *     per_page: int,
  *     unused_total: int,
  *     kept_total: int,
+ *     needs_review_total: int,
  *     results: array<int, object>,
  *     total: int
  * } $data Passed in from AdminMenu::render_page().
@@ -46,13 +47,23 @@ $gmh_last_page = (int) max( 1, ceil( $gmh_total / $gmh_per_page ) );
 			printf( esc_html__( 'Kept (%d)', 'ghost-media-hunter' ), (int) $data['kept_total'] );
 			?>
 		</a>
+		<a href="<?php echo esc_url( add_query_arg( array( 'view' => 'review' ), remove_query_arg( 'paged' ) ) ); ?>" class="nav-tab <?php echo 'review' === $gmh_view ? 'nav-tab-active' : ''; ?>">
+			<?php
+			/* translators: %d: Number of media items needing manual review. */
+			printf( esc_html__( 'Needs Review (%d)', 'ghost-media-hunter' ), (int) $data['needs_review_total'] );
+			?>
+		</a>
 	</h2>
 
 	<p>
 		<?php
 		if ( 'kept' === $gmh_view ) :
 			?>
-			<?php esc_html_e( 'Files you\'ve marked "Keep" — excluded from the Unused list even if the scanner still can\'t find a reference to them.', 'ghost-media-hunter' ); ?>
+			<?php esc_html_e( 'Files you\'ve marked "Keep" - excluded from the Unused list even if the scanner still can\'t find a reference to them.', 'ghost-media-hunter' ); ?>
+			<?php
+		elseif ( 'review' === $gmh_view ) :
+			?>
+			<?php esc_html_e( 'Files that only matched a post meta or option rule you configured - not a guaranteed reference, so worth a quick manual check.', 'ghost-media-hunter' ); ?>
 			<?php
 		else :
 			?>
@@ -77,6 +88,10 @@ $gmh_last_page = (int) max( 1, ceil( $gmh_total / $gmh_per_page ) );
 			if ( 'kept' === $gmh_view ) :
 				?>
 				<?php esc_html_e( 'Nothing kept yet.', 'ghost-media-hunter' ); ?>
+				<?php
+			elseif ( 'review' === $gmh_view ) :
+				?>
+				<?php esc_html_e( 'Nothing needs review right now.', 'ghost-media-hunter' ); ?>
 				<?php
 			else :
 				?>
@@ -150,7 +165,7 @@ $gmh_last_page = (int) max( 1, ceil( $gmh_total / $gmh_per_page ) );
 								data-gmh-action="<?php echo esc_attr( \GhostMediaHunter\Services\ResultActions::ACTION_DELETE ); ?>"
 								data-gmh-nonce="<?php echo esc_attr( wp_create_nonce( \GhostMediaHunter\Services\ResultActions::ACTION_DELETE ) ); ?>"
 								data-attachment-id="<?php echo esc_attr( $row->attachment_id ); ?>"
-								data-gmh-confirm="<?php echo esc_attr__( 'Delete this file? Unless your site has MEDIA_TRASH enabled, this is PERMANENT — it will not go to the trash.', 'ghost-media-hunter' ); ?>"
+								data-gmh-confirm="<?php echo esc_attr__( 'Delete this file? Unless your site has MEDIA_TRASH enabled, this is PERMANENT - it will not go to the trash.', 'ghost-media-hunter' ); ?>"
 							><?php esc_html_e( 'Delete', 'ghost-media-hunter' ); ?></button>
 						</td>
 					</tr>

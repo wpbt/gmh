@@ -10,5 +10,5 @@ parameters:
         - vendor/*
         - tests/*
 
-    scanFiles:
+    bootstrapFiles:
         - ghost-media-hunter.php

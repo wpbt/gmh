@@ -216,4 +216,46 @@ class ScanResultsRepository {
 
 		return null !== $id ? (int) $id : null;
 	}
+
+		/**
+	 * Paginated list of attachments flagged 'needs_review' (and not
+	 * manually whitelisted) — a match came only from post_meta/options,
+	 * not a guaranteed reference, so a human should glance at it.
+	 *
+	 * @param int $per_page Results per page.
+	 * @param int $page     Page number (1-indexed).
+	 * @return array<int, object>
+	 */
+	public function get_needs_review( int $per_page = 20, int $page = 1 ): array {
+		global $wpdb;
+
+		$offset = max( 0, ( $page - 1 ) * $per_page );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table, not covered by WP_Query; caching deferred to the SQL/performance review pass.
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $this->table is not user input
+				"SELECT * FROM {$this->table} WHERE status = %s AND ignored = 0 ORDER BY last_checked DESC LIMIT %d OFFSET %d",
+				'needs_review',
+				$per_page,
+				$offset
+			)
+		);
+	}
+
+	/**
+	 * Count of attachments currently flagged 'needs_review' (and not ignored).
+	 */
+	public function count_needs_review(): int {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- custom table, not covered by WP_Query; caching deferred to the SQL/performance review pass.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- $this->table is not user input
+				"SELECT COUNT(*) FROM {$this->table} WHERE status = %s AND ignored = 0",
+				'needs_review'
+			)
+		);
+	}
 }

@@ -389,7 +389,7 @@ class SettingsPage implements Registrable {
 			);
 		}
 
-		return array_values( $sanitized );
+		return $sanitized;
 	}
 
 	/**

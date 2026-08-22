@@ -73,22 +73,28 @@ class AdminMenu implements Registrable {
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only pagination/tab query args, not a form submission; no state change to protect with a nonce.
 		$requested_view = isset( $_GET['view'] ) ? sanitize_text_field( wp_unslash( $_GET['view'] ) ) : '';
-		$view           = 'kept' === $requested_view ? 'kept' : 'unused';
+		$view           = in_array( $requested_view, array( 'kept', 'review' ), true ) ? $requested_view : 'unused';
 
 		$data = array(
-			'title'        => __( 'Ghost Media Hunter', 'ghost-media-hunter' ),
-			'view'         => $view,
-			'page'         => $page,
-			'per_page'     => self::PER_PAGE,
-			'unused_total' => $this->repository->count_unused(),
-			'kept_total'   => $this->repository->count_kept(),
+			'title'              => __( 'Ghost Media Hunter', 'ghost-media-hunter' ),
+			'view'               => $view,
+			'page'               => $page,
+			'per_page'           => self::PER_PAGE,
+			'unused_total'       => $this->repository->count_unused(),
+			'kept_total'         => $this->repository->count_kept(),
+			'needs_review_total' => $this->repository->count_needs_review(),
 		);
 
-		$data['results'] = 'kept' === $view
-			? $this->repository->get_kept( self::PER_PAGE, $page )
-			: $this->repository->get_unused( self::PER_PAGE, $page );
-
-		$data['total'] = 'kept' === $view ? $data['kept_total'] : $data['unused_total'];
+		if ( 'kept' === $view ) {
+			$data['results'] = $this->repository->get_kept( self::PER_PAGE, $page );
+			$data['total']   = $data['kept_total'];
+		} elseif ( 'review' === $view ) {
+			$data['results'] = $this->repository->get_needs_review( self::PER_PAGE, $page );
+			$data['total']   = $data['needs_review_total'];
+		} else {
+			$data['results'] = $this->repository->get_unused( self::PER_PAGE, $page );
+			$data['total']   = $data['unused_total'];
+		}
 
 		require_once GHOST_MEDIA_HUNTER_PATH . 'views/admin-menu.php';
 	}

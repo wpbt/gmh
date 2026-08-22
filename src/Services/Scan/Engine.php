@@ -86,7 +86,7 @@ class Engine {
 		}
 
 		$matched_sources = $this->matched_sources( $identifiers );
-		$status          = array() === $matched_sources ? 'unused' : 'used';
+		$status          = $this->resolve_status( $matched_sources );
 
 		$this->repository->save_result(
 			$attachment_id,
@@ -94,6 +94,30 @@ class Engine {
 			$matched_sources,
 			$identifiers['file_size']
 		);
+	}
+
+	/**
+	 * Decides the result status from which checkers matched. A match from
+	 * post_content or featured_image is a direct, guaranteed reference —
+	 * status 'used'. A match from post_meta/options only reflects a rule
+	 * the user configured themselves, not a guarantee WordPress is really
+	 * using it — status 'needs_review' instead, so a human glances at it
+	 * rather than it being silently trusted as confirmed-used.
+	 *
+	 * @param array<int, string> $matched_sources Names of checkers that matched.
+	 */
+	private function resolve_status( array $matched_sources ): string {
+		if ( array() === $matched_sources ) {
+			return 'unused';
+		}
+
+		$guaranteed = array( 'post_content', 'featured_image' );
+
+		if ( array() !== array_intersect( $guaranteed, $matched_sources ) ) {
+			return 'used';
+		}
+
+		return 'needs_review';
 	}
 
 	/**

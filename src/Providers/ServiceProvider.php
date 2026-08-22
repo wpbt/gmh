@@ -73,7 +73,7 @@ class ServiceProvider {
 				);
 			},
 			Scripts::class               => function () {
-				return new Scripts;
+				return new Scripts();
 			},
 			ScanRunner::class            => function ( $c ) {
 				return new ScanRunner( $c->get( Engine::class ) );
