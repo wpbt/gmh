@@ -90,7 +90,7 @@ class OptionsChecker implements CheckerInterface {
 
 		global $wpdb;
 
-		$id                      = (string) $identifiers['id'];
+		$id                     = (string) $identifiers['id'];
 		$like_serialized_string = '%"' . $wpdb->esc_like( $id ) . '";%';
 		$like_serialized_int    = '%:' . $wpdb->esc_like( $id ) . ';%';
 
@@ -113,7 +113,7 @@ class OptionsChecker implements CheckerInterface {
 
 		$rule_sql = implode( ' OR ', $rule_clauses );
 
-		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		// Reason: replacement count is dynamic (depends on how many rules are
 		// configured, and how many placeholders each rule's shape needs) —
 		// built at runtime, which phpcs can't evaluate statically. $rule_sql is
@@ -131,6 +131,6 @@ class OptionsChecker implements CheckerInterface {
 		);
 
 		return null !== $wpdb->get_var( $sql );
-		// phpcs:enable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:enable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	}
 }

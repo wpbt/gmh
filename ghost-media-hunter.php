@@ -39,6 +39,7 @@ defined( 'ABSPATH' ) || exit;
 ! defined( 'GHOST_MEDIA_HUNTER_BASENAME' ) && define( 'GHOST_MEDIA_HUNTER_BASENAME', plugin_basename( GHOST_MEDIA_HUNTER_FILE ) );
 ! defined( 'GHOST_MEDIA_HUNTER_PATH' ) && define( 'GHOST_MEDIA_HUNTER_PATH', dirname( GHOST_MEDIA_HUNTER_FILE ) . '/' );
 ! defined( 'GHOST_MEDIA_HUNTER_URL' ) && define( 'GHOST_MEDIA_HUNTER_URL', plugins_url( '/', GHOST_MEDIA_HUNTER_FILE ) );
+! defined( 'GHOST_MEDIA_HUNTER_VERSION' ) && define( 'GHOST_MEDIA_HUNTER_VERSION', '1.0.0' );
 
 require_once __DIR__ . '/vendor/autoload.php';
 

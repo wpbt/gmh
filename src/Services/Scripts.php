@@ -11,6 +11,9 @@ namespace GhostMediaHunter\Services;
 
 use GhostMediaHunter\Interfaces\Registrable;
 
+/**
+ * Registers admin JavaScript and CSS assets.
+ */
 class Scripts implements Registrable {
 
 	/**
@@ -21,14 +24,24 @@ class Scripts implements Registrable {
 	}
 
 	/**
-	 * Method to register scripts
+	 * Registers admin scripts and styles for the plugin settings page.
+	 *
+	 * @param string $hook The current admin page hook suffix.
 	 */
 	public function register_scripts( string $hook ): void {
-		if( ! str_contains( $hook, AdminMenu::SLUG ) ) {
+		if ( ! str_contains( $hook, AdminMenu::SLUG ) ) {
 			return;
 		}
 
-		wp_enqueue_script( 'gmh-admin-script', GHOST_MEDIA_HUNTER_URL . 'assets/js/gmh.js', array( 'jquery' ), '' );
+		$version = WP_DEBUG ? time() : GHOST_MEDIA_HUNTER_VERSION;
+
+		wp_enqueue_script(
+			'gmh-admin-script',
+			GHOST_MEDIA_HUNTER_URL . 'assets/js/gmh.js',
+			array( 'jquery' ),
+			$version,
+			true
+		);
 
 		wp_localize_script(
 			'gmh-admin-script',
@@ -42,6 +55,6 @@ class Scripts implements Registrable {
 			)
 		);
 
-		wp_enqueue_style( 'gmh-style', GHOST_MEDIA_HUNTER_URL . '/assets/css/gmh.css' );
+		wp_enqueue_style( 'gmh-style', GHOST_MEDIA_HUNTER_URL . '/assets/css/gmh.css', array(), $version );
 	}
 }

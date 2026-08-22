@@ -217,7 +217,7 @@ class ScanResultsRepository {
 		return null !== $id ? (int) $id : null;
 	}
 
-		/**
+	/**
 	 * Paginated list of attachments flagged 'needs_review' (and not
 	 * manually whitelisted) — a match came only from post_meta/options,
 	 * not a guaranteed reference, so a human should glance at it.
