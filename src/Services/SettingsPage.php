@@ -68,7 +68,7 @@ class SettingsPage implements Registrable {
 	 */
 	public function register_settings(): void {
 
-		// Sections
+		// Sections.
 		add_settings_section(
 			self::POST_CONTENT_SECTION,
 			__( 'Post Content Scanning', 'ghost-media-hunter' ),
@@ -90,7 +90,7 @@ class SettingsPage implements Registrable {
 			self::SLUG
 		);
 
-		// settings
+		// settings.
 		register_setting(
 			self::OPTION_GROUP,
 			PostContentChecker::INCLUDE_REVISIONS_OPTION,
@@ -121,7 +121,7 @@ class SettingsPage implements Registrable {
 			)
 		);
 
-		// Setting fields
+		// Setting fields.
 		add_settings_field(
 			PostContentChecker::INCLUDE_REVISIONS_OPTION,
 			__( 'Include revisions', 'ghost-media-hunter' ),
