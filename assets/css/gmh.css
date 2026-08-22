@@ -1,0 +1,74 @@
+/**
+ * Custom Rules repeater table (Settings > Custom Rules).
+ */
+.gmh-custom-rules {
+	border-collapse: collapse;
+	margin-top: 8px;
+}
+
+.gmh-custom-rules th,
+.gmh-custom-rules td {
+	padding: 10px 12px;
+	vertical-align: middle;
+}
+
+.gmh-custom-rules th {
+	font-weight: 600;
+}
+
+.gmh-custom-rules td:first-child,
+.gmh-custom-rules th:first-child {
+	padding-left: 16px;
+}
+
+.gmh-custom-rules td:last-child,
+.gmh-custom-rules th:last-child {
+	padding-right: 16px;
+	text-align: right;
+	width: 90px;
+}
+
+.gmh-custom-rules input[type="text"],
+.gmh-custom-rules select {
+	width: 100%;
+	max-width: 260px;
+}
+
+/* Remove button: a quiet icon-style control, not a full bordered button —
+   it's a per-row destructive action, not something that should compete
+   visually with "Add rule" or "Save Changes". */
+.gmh-remove-custom-rule {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	background: transparent;
+	color: #b32d2e;
+	cursor: pointer;
+}
+
+.gmh-remove-custom-rule::before {
+	font: normal 20px/1 dashicons;
+	content: "\f153"; /* dashicons-trash */
+}
+
+.gmh-remove-custom-rule:hover,
+.gmh-remove-custom-rule:focus {
+	background: #f6e4e4;
+	border-color: #b32d2e;
+}
+
+/* "Add rule": a normal secondary button, not the default oversized
+   WP .button — the previous markup rendered fine but at full default
+   button size, which reads too large next to a compact table. */
+#gmh-add-custom-rule {
+	margin-top: 4px;
+	padding: 0 10px;
+	line-height: 26px;
+	height: 28px;
+	font-size: 12px;
+}

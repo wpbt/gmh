@@ -67,14 +67,20 @@ class SettingsPage implements Registrable {
 	 * Registers settings, sections, and fields for the Settings API.
 	 */
 	public function register_settings(): void {
-		register_setting(
-			self::OPTION_GROUP,
-			ScanRestController::OPTION_KEY,
-			array(
-				'type'              => 'string',
-				'sanitize_callback' => array( $this, 'sanitize_scan_key' ),
-				'default'           => '',
-			)
+
+		// Sections
+		add_settings_section(
+			self::POST_CONTENT_SECTION,
+			__( 'Post Content Scanning', 'ghost-media-hunter' ),
+			array( $this, 'render_post_content_section_intro' ),
+			self::SLUG
+		);
+
+		add_settings_section(
+			self::CHECKER_SECTION,
+			__( 'Custom Rules', 'ghost-media-hunter' ),
+			array( $this, 'render_checker_section_intro' ),
+			self::SLUG
 		);
 
 		add_settings_section(
@@ -84,12 +90,15 @@ class SettingsPage implements Registrable {
 			self::SLUG
 		);
 
-		add_settings_field(
-			ScanRestController::OPTION_KEY,
-			__( 'Scan key', 'ghost-media-hunter' ),
-			array( $this, 'render_scan_key_field' ),
-			self::SLUG,
-			self::REST_SECTION
+		// settings
+		register_setting(
+			self::OPTION_GROUP,
+			PostContentChecker::INCLUDE_REVISIONS_OPTION,
+			array(
+				'type'              => 'boolean',
+				'sanitize_callback' => 'rest_sanitize_boolean',
+				'default'           => false,
+			)
 		);
 
 		register_setting(
@@ -102,11 +111,23 @@ class SettingsPage implements Registrable {
 			)
 		);
 
-		add_settings_section(
-			self::CHECKER_SECTION,
-			__( 'Custom Rules', 'ghost-media-hunter' ),
-			array( $this, 'render_checker_section_intro' ),
-			self::SLUG
+		register_setting(
+			self::OPTION_GROUP,
+			ScanRestController::OPTION_KEY,
+			array(
+				'type'              => 'string',
+				'sanitize_callback' => array( $this, 'sanitize_scan_key' ),
+				'default'           => '',
+			)
+		);
+
+		// Setting fields
+		add_settings_field(
+			PostContentChecker::INCLUDE_REVISIONS_OPTION,
+			__( 'Include revisions', 'ghost-media-hunter' ),
+			array( $this, 'render_include_revisions_field' ),
+			self::SLUG,
+			self::POST_CONTENT_SECTION
 		);
 
 		add_settings_field(
@@ -117,29 +138,12 @@ class SettingsPage implements Registrable {
 			self::CHECKER_SECTION
 		);
 
-		register_setting(
-			self::OPTION_GROUP,
-			PostContentChecker::INCLUDE_REVISIONS_OPTION,
-			array(
-				'type'              => 'boolean',
-				'sanitize_callback' => 'rest_sanitize_boolean',
-				'default'           => false,
-			)
-		);
-
-		add_settings_section(
-			self::POST_CONTENT_SECTION,
-			__( 'Post Content Scanning', 'ghost-media-hunter' ),
-			array( $this, 'render_post_content_section_intro' ),
-			self::SLUG
-		);
-
 		add_settings_field(
-			PostContentChecker::INCLUDE_REVISIONS_OPTION,
-			__( 'Include revisions', 'ghost-media-hunter' ),
-			array( $this, 'render_include_revisions_field' ),
+			ScanRestController::OPTION_KEY,
+			__( 'Scan key', 'ghost-media-hunter' ),
+			array( $this, 'render_scan_key_field' ),
 			self::SLUG,
-			self::POST_CONTENT_SECTION
+			self::REST_SECTION
 		);
 	}
 
@@ -207,7 +211,7 @@ class SettingsPage implements Registrable {
 	 */
 	public function render_checker_section_intro(): void {
 		esc_html_e(
-			'Post meta and option values are only checked against attachment IDs for rules you configure below — there is no automatic guessing. A field with no rule configured for it is simply never checked.',
+			'Post meta and option values are only checked against attachment IDs for rules you configure below - there is no automatic guessing. A field with no rule configured for it is simply never checked.',
 			'ghost-media-hunter'
 		);
 	}
@@ -294,8 +298,8 @@ class SettingsPage implements Registrable {
 				</select>
 			</td>
 			<td>
-				<button type="button" class="button-link-delete gmh-remove-custom-rule">
-					<?php esc_html_e( 'Remove', 'ghost-media-hunter' ); ?>
+				<button type="button" class="gmh-remove-custom-rule" title="<?php esc_attr_e( 'Remove rule', 'ghost-media-hunter' ); ?>">
+					<span class="screen-reader-text"><?php esc_html_e( 'Remove rule', 'ghost-media-hunter' ); ?></span>
 				</button>
 			</td>
 		</tr>
