@@ -26,6 +26,7 @@ use GhostMediaHunter\Services\ScanRunner;
 use GhostMediaHunter\Services\ScanTrigger;
 use GhostMediaHunter\Services\CronScheduler;
 use GhostMediaHunter\Services\SettingsPage;
+use GhostMediaHunter\Services\Scripts;
 
 /**
  * Builds the closure map handed to Container — one entry per
@@ -70,6 +71,9 @@ class ServiceProvider {
 						$c->get( OptionsChecker::class ),
 					)
 				);
+			},
+			Scripts::class               => function () {
+				return new Scripts;
 			},
 			ScanRunner::class            => function ( $c ) {
 				return new ScanRunner( $c->get( Engine::class ) );
