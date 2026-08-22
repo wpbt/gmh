@@ -1,7 +1,8 @@
 /**
  * Admin results-list page behaviour: "Scan now" button + row actions
  * (Keep / Delete / Restore). Localized values (nonces, ajax URL,
- * translated strings) are injected via wp_localize_script - see Scripts::register_scripts().
+ * translated strings) are injected via wp_localize_script as
+ * `window.gmhAdminMenu` — see Scripts::register_scripts().
  *
  * @package GhostMediaHunter
  */
@@ -71,6 +72,31 @@
 					$buttons.prop( 'disabled', false );
 					window.alert( config.failedText );
 				} );
+		} );
+		// Custom Rules repeatable rows (Settings page only — these
+		// elements don't exist on the results-list page, so all of
+		// this is a harmless no-op there).
+		var ruleCounter = $( '#gmh-custom-rules-body .gmh-custom-rule-row' ).length;
+
+		$( '#gmh-add-custom-rule' ).on( 'click', function () {
+			var template = document.getElementById( 'gmh-custom-rule-template' );
+			if ( ! template ) {
+				return;
+			}
+
+			var clone = template.content.cloneNode( true );
+			var $clone = $( clone );
+
+			$clone.find( '[name]' ).each( function () {
+				this.name = this.name.replace( '__INDEX__', String( ruleCounter ) );
+			} );
+			ruleCounter++;
+
+			$( '#gmh-custom-rules-body' ).append( $clone );
+		} );
+
+		$( '#gmh-custom-rules-body' ).on( 'click', '.gmh-remove-custom-rule', function () {
+			$( this ).closest( 'tr' ).remove();
 		} );
 	} );
 } )( jQuery );

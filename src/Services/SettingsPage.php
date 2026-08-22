@@ -14,12 +14,13 @@ defined( 'ABSPATH' ) || exit;
 
 use GhostMediaHunter\Interfaces\Registrable;
 use GhostMediaHunter\Services\Checkers\PostContentChecker;
+use GhostMediaHunter\Services\Checkers\PostMetaChecker;
 
 /**
- * Settings page (Media > GMH Settings). Two sections so far: the REST
- * scan key (view + regenerate) and the checker matching keywords used
- * by OptionsChecker/PostMetaChecker. Cron interval could be a third
- * section later.
+ * Settings page (Media > GMH Settings). Sections: the REST scan key
+ * (view + regenerate), user-configured Custom Rules consumed by
+ * PostMetaChecker/OptionsChecker, and Post Content Scanning (revision
+ * handling). Cron interval could be a section later.
  */
 class SettingsPage implements Registrable {
 
@@ -27,23 +28,19 @@ class SettingsPage implements Registrable {
 	public const OPTION_GROUP          = 'gmh_settings';
 	private const REST_SECTION         = 'gmh_rest_section';
 	private const CHECKER_SECTION      = 'gmh_checker_section';
-	private const KEYWORDS_OPTION      = 'gmh_checker_keywords';
 	private const POST_CONTENT_SECTION = 'gmh_post_content_section';
 
-	// Kept in sync with the same list in Activate::run() and the
-	// DEFAULT_KEYWORDS fallback in OptionsChecker/PostMetaChecker.
-	private const DEFAULT_KEYWORDS = array(
-		'image',
-		'logo',
-		'photo',
-		'banner',
-		'thumbnail',
-		'icon',
-		'avatar',
-		'media',
-		'background',
-		'gallery',
-	);
+	/**
+	 * Allowed values for a rule's "location" field — kept in sync with
+	 * what PostMetaChecker/OptionsChecker actually consume.
+	 */
+	private const RULE_LOCATIONS = array( 'postmeta', 'options' );
+
+	/**
+	 * Allowed values for a rule's "value_shape" field — kept in sync
+	 * with what PostMetaChecker/OptionsChecker actually handle.
+	 */
+	private const RULE_VALUE_SHAPES = array( 'plain', 'serialized' );
 
 	/**
 	 * Registers the admin_menu and admin_init hooks for this service.
@@ -97,25 +94,25 @@ class SettingsPage implements Registrable {
 
 		register_setting(
 			self::OPTION_GROUP,
-			self::KEYWORDS_OPTION,
+			PostMetaChecker::CUSTOM_RULES_OPTION,
 			array(
 				'type'              => 'array',
-				'sanitize_callback' => array( $this, 'sanitize_keywords' ),
-				'default'           => self::DEFAULT_KEYWORDS,
+				'sanitize_callback' => array( $this, 'sanitize_custom_rules' ),
+				'default'           => array(),
 			)
 		);
 
 		add_settings_section(
 			self::CHECKER_SECTION,
-			__( 'Checker Matching', 'ghost-media-hunter' ),
+			__( 'Custom Rules', 'ghost-media-hunter' ),
 			array( $this, 'render_checker_section_intro' ),
 			self::SLUG
 		);
 
 		add_settings_field(
-			self::KEYWORDS_OPTION,
-			__( 'Match keywords', 'ghost-media-hunter' ),
-			array( $this, 'render_keywords_field' ),
+			PostMetaChecker::CUSTOM_RULES_OPTION,
+			__( 'Rules', 'ghost-media-hunter' ),
+			array( $this, 'render_custom_rules_field' ),
 			self::SLUG,
 			self::CHECKER_SECTION
 		);
@@ -206,34 +203,102 @@ class SettingsPage implements Registrable {
 	}
 
 	/**
-	 * Renders the intro text for the "Checker Matching" section.
+	 * Renders the intro text for the "Custom Rules" section.
 	 */
 	public function render_checker_section_intro(): void {
 		esc_html_e(
-			'Post meta and option keys must contain one of these words before their value is checked against an attachment ID — this narrows matching to cut down on false positives (e.g. an unrelated numeric setting coincidentally matching an attachment ID). Used by the "post_meta" and "options" checkers.',
+			'Post meta and option values are only checked against attachment IDs for rules you configure below — there is no automatic guessing. A field with no rule configured for it is simply never checked.',
 			'ghost-media-hunter'
 		);
 	}
 
 	/**
-	 * Renders the checker match-keywords field.
+	 * Renders the repeatable custom-rules field: one row per configured
+	 * rule (key / location / value shape), plus a hidden template row
+	 * (index placeholder __INDEX__) that gmh.js clones when "Add rule"
+	 * is clicked. Row indices don't need to stay contiguous — PHP
+	 * parses whatever index values arrive in $_POST regardless of gaps.
 	 */
-	public function render_keywords_field(): void {
-		$keywords = get_option( self::KEYWORDS_OPTION, self::DEFAULT_KEYWORDS );
+	public function render_custom_rules_field(): void {
+		$rules = get_option( PostMetaChecker::CUSTOM_RULES_OPTION, array() );
 
-		if ( ! is_array( $keywords ) || empty( $keywords ) ) {
-			$keywords = self::DEFAULT_KEYWORDS;
+		if ( ! is_array( $rules ) ) {
+			$rules = array();
 		}
+
+		$rules = array_values( $rules );
 		?>
-		<input
-			type="text"
-			class="regular-text"
-			name="<?php echo esc_attr( self::KEYWORDS_OPTION ); ?>"
-			value="<?php echo esc_attr( implode( ', ', $keywords ) ); ?>"
-		/>
-		<p class="description">
-			<?php esc_html_e( 'Comma-separated. Matching is case-insensitive and checks whether a key contains each word (not an exact match).', 'ghost-media-hunter' ); ?>
+		<table class="widefat gmh-custom-rules" id="gmh-custom-rules">
+			<thead>
+				<tr>
+					<th><?php esc_html_e( 'Meta key to check', 'ghost-media-hunter' ); ?></th>
+					<th><?php esc_html_e( 'Key lives in', 'ghost-media-hunter' ); ?></th>
+					<th><?php esc_html_e( 'Data structure', 'ghost-media-hunter' ); ?></th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody id="gmh-custom-rules-body">
+				<?php foreach ( $rules as $index => $rule ) : ?>
+					<?php $this->render_custom_rule_row( (string) $index, is_array( $rule ) ? $rule : array() ); ?>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
+
+		<template id="gmh-custom-rule-template">
+			<?php $this->render_custom_rule_row( '__INDEX__', array() ); ?>
+		</template>
+
+		<p>
+			<button type="button" class="button" id="gmh-add-custom-rule">
+				<?php esc_html_e( '+ Add rule', 'ghost-media-hunter' ); ?>
+			</button>
 		</p>
+		<?php
+	}
+
+	/**
+	 * Renders one custom-rule row's <tr> markup. Shared between the
+	 * server-rendered existing rows and the hidden <template> row
+	 * gmh.js clones — $index is either a real array index (string) or
+	 * the literal placeholder "__INDEX__" for the template.
+	 *
+	 * @param string              $index Row index (or "__INDEX__" for the template row).
+	 * @param array<string,mixed> $rule  Rule data for this row (empty array for a blank row).
+	 */
+	private function render_custom_rule_row( string $index, array $rule ): void {
+		$key         = (string) ( $rule['key'] ?? '' );
+		$location    = (string) ( $rule['location'] ?? 'postmeta' );
+		$value_shape = (string) ( $rule['value_shape'] ?? 'plain' );
+		$option      = PostMetaChecker::CUSTOM_RULES_OPTION;
+		?>
+		<tr class="gmh-custom-rule-row">
+			<td>
+				<input
+					type="text"
+					class="regular-text"
+					name="<?php echo esc_attr( $option ); ?>[<?php echo esc_attr( $index ); ?>][key]"
+					value="<?php echo esc_attr( $key ); ?>"
+					placeholder="<?php esc_attr_e( 'e.g. hero_image_id', 'ghost-media-hunter' ); ?>"
+				/>
+			</td>
+			<td>
+				<select name="<?php echo esc_attr( $option ); ?>[<?php echo esc_attr( $index ); ?>][location]">
+					<option value="postmeta" <?php selected( 'postmeta', $location ); ?>><?php esc_html_e( 'Post Meta', 'ghost-media-hunter' ); ?></option>
+					<option value="options" <?php selected( 'options', $location ); ?>><?php esc_html_e( 'Options', 'ghost-media-hunter' ); ?></option>
+				</select>
+			</td>
+			<td>
+				<select name="<?php echo esc_attr( $option ); ?>[<?php echo esc_attr( $index ); ?>][value_shape]">
+					<option value="plain" <?php selected( 'plain', $value_shape ); ?>><?php esc_html_e( 'Plain value (a number or ID string)', 'ghost-media-hunter' ); ?></option>
+					<option value="serialized" <?php selected( 'serialized', $value_shape ); ?>><?php esc_html_e( 'Serialized (nested inside an array/object)', 'ghost-media-hunter' ); ?></option>
+				</select>
+			</td>
+			<td>
+				<button type="button" class="button-link-delete gmh-remove-custom-rule">
+					<?php esc_html_e( 'Remove', 'ghost-media-hunter' ); ?>
+				</button>
+			</td>
+		</tr>
 		<?php
 	}
 
@@ -279,33 +344,52 @@ class SettingsPage implements Registrable {
 	}
 
 	/**
-	 * Sanitizes the checker match-keywords setting into a lowercase, deduped array.
+	 * Sanitizes the submitted custom-rules array: drops blank rows (no
+	 * key entered — e.g. the template row if it somehow got submitted,
+	 * or a row the user added but didn't fill in), validates location/
+	 * value_shape against the known allowed values (falls back to the
+	 * safe default rather than rejecting the whole save on a tampered
+	 * or stale value), and re-indexes the array.
 	 *
-	 * @param mixed $value Raw submitted value (comma-separated string expected).
-	 * @return string[]
+	 * @param mixed $value Raw submitted value — expected to be an array of {key, location, value_shape} sub-arrays keyed by row index.
+	 * @return array<int, array{key: string, location: string, value_shape: string}>
 	 */
-	public function sanitize_keywords( $value ): array {
-		$parts = explode( ',', (string) $value );
-		$parts = array_map( 'trim', $parts );
-		$parts = array_map( 'strtolower', $parts );
-		$parts = array_filter( $parts, static fn ( $word ) => '' !== $word );
-		$parts = array_values( array_unique( $parts ) );
-
-		if ( empty( $parts ) ) {
-			// An empty list here would leave OptionsChecker/PostMetaChecker
-			// with nothing to filter on, breaking their SQL entirely (see
-			// the checkers' own guards for the same underlying issue).
-			// Refuse to save empty — fall back to the defaults instead.
-			add_settings_error(
-				self::KEYWORDS_OPTION,
-				'gmh_keywords_empty',
-				__( 'Match keywords can\'t be empty — reset to the defaults.', 'ghost-media-hunter' )
-			);
-
-			return self::DEFAULT_KEYWORDS;
+	public function sanitize_custom_rules( $value ): array {
+		if ( ! is_array( $value ) ) {
+			return array();
 		}
 
-		return $parts;
+		$sanitized = array();
+
+		foreach ( $value as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$key = sanitize_text_field( (string) ( $row['key'] ?? '' ) );
+
+			if ( '' === $key ) {
+				continue;
+			}
+
+			$location = (string) ( $row['location'] ?? '' );
+			if ( ! in_array( $location, self::RULE_LOCATIONS, true ) ) {
+				$location = 'postmeta';
+			}
+
+			$value_shape = (string) ( $row['value_shape'] ?? '' );
+			if ( ! in_array( $value_shape, self::RULE_VALUE_SHAPES, true ) ) {
+				$value_shape = 'plain';
+			}
+
+			$sanitized[] = array(
+				'key'         => $key,
+				'location'    => $location,
+				'value_shape' => $value_shape,
+			);
+		}
+
+		return array_values( $sanitized );
 	}
 
 	/**

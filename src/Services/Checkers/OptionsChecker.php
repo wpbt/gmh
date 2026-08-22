@@ -15,44 +15,36 @@ defined( 'ABSPATH' ) || exit;
 use GhostMediaHunter\Interfaces\CheckerInterface;
 
 /**
- * Checks wp_options for a reference to the attachment ID — covers
- * theme mods, Customizer settings (logo/favicon), and plugin settings
- * that store an attachment ID, including serialized array values.
+ * Checks wp_options for a reference to the attachment ID — but only
+ * against rules the user has explicitly configured (Settings > Custom
+ * Rules), never by guessing at option_name names.
  *
- * Scope: matches on attachment ID only, same as PostMetaChecker — not
- * URL/filename stored in option values.
+ * This replaces the old keyword-gated version (matched any option_name
+ * *containing* a word like "image"/"logo"), which was a guess, not a
+ * guarantee — an option storing an image ID under a name that doesn't
+ * happen to contain one of those words was invisible to it, and that
+ * failure mode is the dangerous kind: a real "used" image silently
+ * reported as unused.
  *
- * Scans the whole options table (no autoload/transient exclusion) —
- * an explicit choice to keep this simple for now; revisit if false
- * positives from transient/cache data turn out to be a problem.
+ * A rule is {key, location, value_shape}. This checker only consumes
+ * rules where location === 'options'; 'postmeta' rules are read by
+ * PostMetaChecker instead — both share the one gmh_custom_rules option.
  *
- * Restricted to option_names that look image-related. Without this,
- * a bare numeric ID match can coincidentally hit unrelated data (e.g.
- * a width, a menu order, a version number that happens to equal the
- * attachment ID) — found in practice with attachment 122. Real
- * image-storing option names almost always contain one of these
- * words, so this filter cuts the false-positive surface without
- * meaningfully losing real matches.
+ * value_shape is one of:
+ *  - 'plain'      exact scalar match (option_value = '42') — covers both
+ *                 a numeric and a string-stored ID, since WordPress
+ *                 stores both identically as raw text either way.
+ *  - 'serialized' the ID as a serialized string OR int element,
+ *                 wherever it's nested in the value (e.g. a plugin
+ *                 setting storing an array of IDs) — checked as an OR,
+ *                 not asked of the user, since which one a given
+ *                 plugin used is an implementation detail they can't
+ *                 realistically know.
  *
- * Keywords are configurable via Settings (gmh_checker_keywords option,
- * shared with PostMetaChecker) — DEFAULT_KEYWORDS below is only the
- * fallback used if that option is somehow missing (should be seeded
- * on activation).
+ * Zero configured options rules = this checker is a no-op (returns
+ * false immediately) — no default guessing, by design.
  */
 class OptionsChecker implements CheckerInterface {
-
-	private const DEFAULT_KEYWORDS = array(
-		'image',
-		'logo',
-		'photo',
-		'banner',
-		'thumbnail',
-		'icon',
-		'avatar',
-		'media',
-		'background',
-		'gallery',
-	);
 
 	/**
 	 * Checker identifier used in matched_sources.
@@ -62,7 +54,8 @@ class OptionsChecker implements CheckerInterface {
 	}
 
 	/**
-	 * Checks wp_options for an option value referencing this attachment ID.
+	 * Checks wp_options for an option value referencing this attachment ID,
+	 * against user-configured rules only.
 	 *
 	 * @param array{id: int, relative_path: string, filename: string, basename: string, extension: string, file_size: int}|null $identifiers Identifiers for the attachment, or null.
 	 */
@@ -71,60 +64,70 @@ class OptionsChecker implements CheckerInterface {
 			return false;
 		}
 
+		$rules = get_option( PostMetaChecker::CUSTOM_RULES_OPTION, array() );
+
+		if ( ! is_array( $rules ) ) {
+			$rules = array();
+		}
+
+		$options_rules = array_values(
+			array_filter(
+				$rules,
+				static function ( $rule ) {
+					return is_array( $rule )
+						&& 'options' === ( $rule['location'] ?? '' )
+						&& '' !== ( $rule['key'] ?? '' );
+				}
+			)
+		);
+
+		// No rules configured for options — nothing to check, and
+		// deliberately no fallback guess. This is the whole point of
+		// the redesign: silence here, not a guess that might be wrong.
+		if ( array() === $options_rules ) {
+			return false;
+		}
+
 		global $wpdb;
 
-		$id = (string) $identifiers['id'];
-
-		// Plain scalar option value, e.g. a "site_logo" option storing just the ID.
-		$exact = $id;
-
-		// Serialized string element, e.g. s:2:"42";.
+		$id                      = (string) $identifiers['id'];
 		$like_serialized_string = '%"' . $wpdb->esc_like( $id ) . '";%';
+		$like_serialized_int    = '%:' . $wpdb->esc_like( $id ) . ';%';
 
-		// Serialized int element, e.g. i:42;.
-		$like_serialized_int = '%:' . $wpdb->esc_like( $id ) . ';%';
+		$rule_clauses = array();
+		$rule_values  = array();
 
-		$keywords = get_option( 'gmh_checker_keywords', self::DEFAULT_KEYWORDS );
-
-		/**
-		 * The get_option()'s default only applies when the option row doesn't
-		 * exist at all — if it exists but was saved as an empty array (e.g.
-		 * the settings field got submitted blank), get_option() faithfully
-		 * returns that empty array, not our fallback. An empty $keywords
-		 * means zero LIKE clauses below, which produces invalid SQL
-		 * ("WHERE () AND ...") — guard explicitly instead of trusting the
-		 * stored value is always non-empty.
-		 */
-		if ( ! is_array( $keywords ) || empty( $keywords ) ) {
-			$keywords = self::DEFAULT_KEYWORDS;
+		foreach ( $options_rules as $rule ) {
+			if ( 'serialized' === ( $rule['value_shape'] ?? '' ) ) {
+				$rule_clauses[] = '(option_name = %s AND (option_value LIKE %s OR option_value LIKE %s))';
+				$rule_values[]  = $rule['key'];
+				$rule_values[]  = $like_serialized_string;
+				$rule_values[]  = $like_serialized_int;
+			} else {
+				// 'plain' — the only other supported shape.
+				$rule_clauses[] = '(option_name = %s AND option_value = %s)';
+				$rule_values[]  = $rule['key'];
+				$rule_values[]  = $id;
+			}
 		}
 
-		$keyword_clauses = array();
-		$keyword_values  = array();
-		foreach ( $keywords as $keyword ) {
-			$keyword_clauses[] = 'option_name LIKE %s';
-			$keyword_values[]  = '%' . $wpdb->esc_like( $keyword ) . '%';
-		}
-		$keyword_sql = implode( ' OR ', $keyword_clauses );
+		$rule_sql = implode( ' OR ', $rule_clauses );
 
-        // phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		// Reason: replacement count is dynamic (one %s per configured keyword, plus 3
-		// fixed) — array_merge() builds it at runtime, which phpcs can't evaluate
-		// statically. $keyword_sql is built entirely from the static string
-		// 'option_name LIKE %s' repeated per keyword — no user input is
-		// interpolated, actual values are bound via $keyword_values. Custom pattern
-		// search across wp_options, not covered by the Options API; caching
-		// deferred to the SQL/performance review pass.
+		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// Reason: replacement count is dynamic (depends on how many rules are
+		// configured, and how many placeholders each rule's shape needs) —
+		// built at runtime, which phpcs can't evaluate statically. $rule_sql is
+		// built entirely from two fixed static templates repeated per rule — no
+		// user input is interpolated into the SQL text itself, actual values are
+		// bound via $rule_values (including the rule's own "key", i.e. the
+		// option_name an admin configured in Settings, not end-user input).
+		// Custom pattern search across wp_options, not covered by the Options
+		// API; caching deferred to the SQL/performance review pass.
 		$sql = $wpdb->prepare(
 			"SELECT option_id FROM {$wpdb->options}
-			WHERE ({$keyword_sql})
-			AND (
-				option_value = %s
-				OR option_value LIKE %s
-				OR option_value LIKE %s
-			)
+			WHERE ({$rule_sql})
 			LIMIT 1",
-			array_merge( $keyword_values, array( $exact, $like_serialized_string, $like_serialized_int ) )
+			$rule_values
 		);
 
 		return null !== $wpdb->get_var( $sql );
